@@ -1,17 +1,19 @@
-#%%
+#%% Prepare datasets
 import numpy as np
 import pandas as pd
 import pods
 import zipfile
 import os
 
+# Download datasets
 if 'ml-latest-small.zip' not in os.listdir():
     pods.util.download_url(
         "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip")
+if 'ml-latest-small' not in os.listdir():
     zip_console = zipfile.ZipFile('ml-latest-small.zip', 'r')
     for name in zip_console.namelist():
         zip_console.extract(name, './')
-#%%
+#%% Format datasets
 
 def ReadData(data_dir: str) -> pd.core.frame.DataFrame:
     return pd.read_csv(data_dir)
@@ -60,14 +62,14 @@ def Grad(U, V, Y):
         dU.loc[user] += 2 * diff * V.loc[movie]
         dV.loc[movie] += 2 * diff * U.loc[user]
     return loss, dU, dV
-
+# Initialize & set parameters
 latent_dimension = 2
 lr = 0.01
 U = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.columns), latent_dimension)),
                  index=Y_with_NaNs.columns) * 0.001  # user
 V = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.index), latent_dimension)),
                  index=Y_with_NaNs.index) * 0.001  # movies
-#%%
+#%% Iteration
 iterations = 20
 learn_rate = 0.01
 for i in range(iterations):

@@ -70,7 +70,7 @@ U = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.columns), latent_dimensi
 V = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.index), latent_dimension)),
                  index=Y_with_NaNs.index) * 0.001  # movies
 #%% Iteration
-iterations = 20
+iterations = 10
 learn_rate = 0.01
 for i in range(iterations):
     loss, dU, dV = Grad(U, V, Y)
@@ -78,3 +78,74 @@ for i in range(iterations):
     print("Iteration", i, "MSE: ", loss)
     U -= learn_rate*dU
     V -= learn_rate*dV
+#%% SGD
+from tqdm import tqdm
+import matplotlib.pylab as plt
+%matplotlib inline
+
+def ComputeLoss(U,V,Y):
+    loss = 0
+    for user, movie, _, rating in iter(Y.values):
+        predict = np.dot(U.loc[user], V.loc[movie])
+        diff = np.squeeze(predict) - rating
+        loss += diff**2
+    return loss
+
+def SGD_Grad(rating,u,v):
+    prediction = np.dot(u,v)
+    diff = prediction - rating
+    dU = 2*diff*v
+    dV = 2*diff*u
+    return dU,dV
+
+def SGD(U,V,Y,lr = 0.01, max_iter = 100, check_loss = 1000):
+    update_counter = 0
+    loss_prev = None
+    converge = False
+
+    num_updates = []
+    total_loss = []
+    idx_list = Y.index.values
+    for iter in tqdm(range(max_iter),leave = False):
+        if converge:
+            break
+        np.random.shuffle(idx_list)
+        for i in idx_list:
+            if converge:
+                break
+            user,movie,_,rating =  Y.loc[i]
+            # dU,dV shapes (2,)
+            dU,dV = SGD_Grad(rating, U.loc[user], V.loc[movie])
+            U.loc[user] -= lr*dU
+            V.loc[movie] -= lr*dV
+            update_counter += 1
+            if update_counter % check_loss == 0:
+                loss = ComputeLoss(U, V, Y)
+                num_updates.append(update_counter)
+                total_loss.append(loss)
+                print('Update {} times, objective {:.5f}'.format(update_counter, loss))
+                if loss_prev == None or loss_prev > loss:
+                    loss_prev = loss
+                else:
+                    converge = True
+    plt.plot(num_updates, total_loss, 'rx-')
+    plt.title('Objectives over updates')
+    plt.show()
+
+    return U,V
+
+U = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.columns), latent_dimension)),
+                 index=Y_with_NaNs.columns) * 0.001  # user
+V = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.index), latent_dimension)),
+                 index=Y_with_NaNs.index) * 0.001  # movies
+
+U,V = SGD(U, V, Y, lr = 0.01, max_iter = 100, check_loss = 1000)
+
+#%% SGD plots
+plt.plot(V[0],V[1],'rx')
+plt.title('Movie map')
+plt.show()
+
+plt.plot(U[0],U[1],'bx')
+plt.title('User map')
+plt.show()

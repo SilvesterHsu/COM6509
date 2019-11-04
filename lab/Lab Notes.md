@@ -170,3 +170,368 @@ It should use conditional distribution.
 #### Answer
 
 We can use a conditional probability as a predictive model of the probability of quality rating values given other variables in the dataset. We can ask questions like *what is the probability that the rating for a particular film is equal to 7 given other features for the film?* In this case the distribution will be over `IMDB_Rating` and it would be conditioned on all the other variables `Film`, `Year`, `Body_Count`, `MPAA_Rating`, `Genre`, ...
+
+## Lab 2 Questions
+
+### Question 1
+
+Data ethics. If you find data available on the internet, can you simply use it without consequence? If you are given data by a fellow researcher can you publish that data on line?
+
+#### My Answer
+
+No, the reliability of the data should be considered before using the data.
+
+No, the researcher has copyright to the data and cannot publish the data at will.
+
+#### Answer
+
+It depends on the **licensing** terms of the data. However, if the data has no licensing terms but it is related to a **person** in someway (e.g. health data)then there may be **consequences**, depending on local laws.
+
+In general no, you would certainly have to get their **permission**. Be very careful about data containing any **personal** information. Even data that is anonymized can be "de-anonymized".
+
+### Question 2
+
+Have a look at the matrix `Y_with_NaNs`. The movies data is now in a data frame which contains one column for each user rating the movie. There are some entries that contain 'NaN'. What does the 'NaN' mean in this context?
+
+#### My Answer
+
+NaN indicates data vacancies.
+
+#### Answer
+
+In this context, NaN represents a movie that has not been given a rating by the user of that column.
+
+### Question 3
+
+The dataframes `Y_with_NaNs` and `Y` contain the same information but organised in a different way. Explain what is the difference. We have also included two columns for ratings in dataframe `Y`, `ratingsorig` and `ratings`. Explain the difference.
+
+#### My Answer
+
+`Y_with_NaNs` is a matrix of user and movie; `Y` is a list, and each column is a feature.
+
+The main difference between `ratings` and `ratingsorig` is whether to subtract the mean, and subtracting the mean is more conducive to calculation.
+
+#### Answer
+
+The dataframe `Y_with_NaNs` is organised as a **matrix**, <u>with rows being movies and columns being users</u>. The dataframe `Y` takes this information and makes each entry in `Y_with_NaNs` it's own <u>row with the first column being the user, the next the movie, the next the original rating and the last the transformed rating</u>. In mathematical terms, `Y_with_NaNs` is a matrix with the ijth entry representing the rating $X$ of the ith movie for the jth user and the `Y` is a dataframe with columns, j i $X$. Thus `Y_with_NaNs` is movie-orientation while `Y` is user-orientation.
+
+The ratingsorig is the raw rating given by a user, ratings is the original rating with the mean rating subtracted.
+
+### Question 4
+
+What is the gradient of the objective function with respect to $v_{k, \ell}$? Write your answer in the box below, and explain which differentiation techniques you used to get there. 
+
+#### My Answer
+
+$$
+\frac{\text{d}E(\mathbf{U}, \mathbf{V})}{\text{d}v_{k,\ell}} = -2 \sum_i s_{i,k}u_{i,\ell}(y_{i, k} - \mathbf{u}_i^\top\mathbf{v}_{k})
+$$
+
+![lab2-01.jpg](https://tva1.sinaimg.cn/large/006y8mN6gy1g8lewmu3tdj30sg0r9juu.jpg)
+
+#### Answer
+
+Initially we have 
+$$
+E(\mathbf{U}, \mathbf{V}) = \sum_{i,j} s_{i,j} (y_{i,j} - \mathbf{u}_i^\top \mathbf{v}_j)^2
+$$
+In order to find $ \frac{\text{d}E(\mathbf{U}, \mathbf{V})}{\text{d}v_{k,\ell}}$ we first have to use the product rule as there are 2 distinct functions however as $s_{i,j}$ is a constant, the first one equals zero and so we are left with 
+$$
+\frac{\text{d}E(\mathbf{U}, \mathbf{V})}{\text{d}v_{k,\ell}} = \sum_{i,j} s_{i,j} \times 
+\frac{\text{d}(y_{i, j} - \mathbf{u}_i^\top\mathbf{v}_{j})^2}{\text{d}v_{k,\ell}}
+$$
+Next we have to perform $\frac{\text{d}(y_{i, j} - \mathbf{u}_i^\top\mathbf{v}_{j})^2}{\text{d}v_{k,\ell}}$ which is done using the chain rule. This gives 
+$$
+\frac{\text{d}(y_{i, j} - \mathbf{u}_i^\top\mathbf{v}_{j})^2}{\text{d}v_{k,\ell}} = 
+2(y_{i, j} - \mathbf{u}_i^\top\mathbf{v}_{j}) \times \frac{-\text{d}\mathbf{u}_i^\top\mathbf{v}_{j}}{\text{d}v_{k,j}}
+$$
+Now, $\frac{\text{d}\mathbf{u}_i^\top\mathbf{v}_{j}}{\text{d}v_{k,\ell}}$ needs to be differentated. $\mathbf{u}_i^\top\mathbf{v}_{j}$ is the inner product of the vector $\mathbf{u}_i$ and  $\mathbf{v}_{j}$ and so is a sum of products. The only time this will not differentiate to zero is when one of the products in the sum contains $\mathbf{v}_{k,\ell}$, all other terms differentiate to zero. This means that the only inner products that do not differentiate to zero are those that involve $\mathbf{v}_k$. These products differentiate to $u_{i,\ell}$. This gives that:
+$$
+\frac{\text{d}\mathbf{u}_i^\top\mathbf{v}_{k}}{\text{d}v_{k,\ell}} = u_{i,\ell}
+$$
+The implications in the full equation is that $j=k$ and so the sum over $j$ now disappears as these other sums are all zero.
+And so, putting all this working together gives the final result as:
+$$
+\frac{\text{d}E(\mathbf{U}, \mathbf{V})}{\text{d}v_{k,\ell}} = -2 \sum_i s_{i,k}u_{i,\ell}(y_{i, k} - \mathbf{u}_i^\top\mathbf{v}_{k}).
+$$
+
+### Question 5
+
+What happens as you increase the number of iterations? What happens if you increase the learning rate?
+
+#### My Answer
+
+After increasing the number of iterations, the MSE drops to a lower point (there may be an overfitting problem).
+
+After increasing the learning rate, the gradient drops faster, but the MSE may not converge.
+
+#### Answer
+
+As you increase the number of iterations, the objective function starts **decreasing**.
+
+As you increase the learning rate, initially it **learns** **quicker**, but then later on it takes **steps** that are **too big** and you end up shooting the gradient to places where the **error** is **bigger**.
+
+### Question 6
+
+Create a function that provides the prediction of the ratings for the users in the dataset. Is the quality of the predictions affected by the number of iterations or the learning rate? The function should receive `Y`, `U` and `V` and return the predictions and the absolute error between the predictions and the actual rating given by the users. The predictions and <u>the absolute error should be added as additional columns to the dataframe `Y</u>`.
+
+#### My Answer
+
+```python
+def Prediction(U, V, Y):
+    Y_without_NaNs = pd.DataFrame(data=np.dot(
+        U, V.T).T + Y['ratingsorig'].mean(), columns=Y_with_NaNs.columns, index=Y_with_NaNs.index)
+    diff = Y_without_NaNs - Y_with_NaNs
+    total = diff.fillna(value=0).apply(abs).sum().sum()
+    return Y_without_NaNs, total
+
+prediction, loss = Prediction(U, V, Y)
+```
+
+#### Answer
+
+```python
+def prediction(Y,U,V):
+    pred_df = pd.DataFrame(index = Y.index, columns = ['prediction'])
+    abs_error_df = pd.DataFrame(index = Y.index, columns = ['absolute error'])
+    for i in Y.index:
+        row = Y.iloc[i]
+        user = row['users']
+        film = row['movies']
+        rating = row['ratings']
+        pred_df.loc[i] = np.dot(U.loc[user], V.loc[film]) # vTu
+        abs_error_df.loc[i] = abs(pred_df.iloc[i, 0]-rating)      
+    return pred_df, abs_error_df
+
+pred_df, abs_error_df = prediction(Y, U, V)
+Y['prediction'] = pred_df
+Y['absolute error'] = abs_error_df
+```
+
+### Question 7
+
+Create a stochastic gradient descent version of the algorithm. Monitor the objective function after every 1000 updates to ensure that it is decreasing. When you have finished, plot the movie map and the user map in two dimensions (you can use the columns of the matrices $\mathbf{U}$ for the user map and the columns of $\mathbf{V}$ for the movie map). Provide three observations about these maps.
+
+#### My Answer
+
+None
+
+#### Answer
+
+```python
+# Question 7 Code Answer
+import matplotlib.pylab as plt
+%matplotlib inline
+
+def compute_obj(Y, U, V):
+    obj = 0
+    for i in Y.index:
+        row = Y.iloc[i]
+        user = row['users']
+        film = row['movies']
+        rating = row['ratings']
+        prediction = np.dot(U.loc[user], V.loc[film]) # vTu
+        diff = prediction - rating # vTu - y
+        obj += diff*diff
+    return obj
+
+def obj_gradient(rating, u, v):
+    prediction = np.dot(u, v)
+    diff = prediction - rating
+    gU = 2* diff * v
+    gV = 2* diff * u
+
+    return gU, gV
+
+
+def SGD(Y, U, V, learn_rate = 0.01, max_iter = 100, check_obj = 1000):
+    update_counter = 0
+    obj_prev = None
+    converge = False
+    
+    num_updates = []
+    objectives = []
+    idx_list = Y.index.values
+    for iteration in range(max_iter):
+        if converge:
+            break
+        np.random.shuffle(idx_list)
+        for i in idx_list:
+            if converge:
+                break
+            row = Y.iloc[i]
+            user = row['users']
+            film = row['movies']
+            rating = row['ratings']            
+            gU, gV = obj_gradient(rating, U.loc[user], V.loc[film])
+            U.loc[user] -= learn_rate * gU
+            V.loc[film] -= learn_rate * gV 
+            update_counter += 1
+            if update_counter %check_obj == 0:
+                obj = compute_obj(Y, U, V)
+                num_updates.append(update_counter)
+                objectives.append(obj)
+                print('Update %s times, objective %s'%(update_counter, obj))
+                if obj_prev == None or obj_prev > obj:
+                    obj_prev = obj
+                else:
+                    converge = True
+                    
+    plt.plot(num_updates, objectives, 'rx-')
+    plt.title('Objectives over updates')
+    plt.show()
+                    
+    return U, V                
+            
+    
+q = 2
+U = pd.DataFrame(np.random.normal(size=(nUsersInExample, q))*0.001, index=my_batch_users)
+V = pd.DataFrame(np.random.normal(size=(n_movies, q))*0.001, index=indexes_unique_movies)
+
+U, V = SGD(Y, U, V)
+```
+
+```python
+plt.plot(V[0],V[1],'rx')
+plt.title('Movie map')
+plt.show()
+
+plt.plot(U[0],U[1],'bx')
+plt.title('User map')
+plt.show()
+```
+
+
+
+### Question 8
+
+Use stochastic gradient descent to make a movie map for the MovieLens 100k data. Plot the map of the movies when you are finished.
+
+#### My Answer
+
+```python
+# %% Prepare datasets
+import numpy as np
+import pandas as pd
+import pods
+import zipfile
+import os
+
+# Download datasets
+if 'ml-latest-small.zip' not in os.listdir():
+    pods.util.download_url(
+        "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip")
+if 'ml-latest-small' not in os.listdir():
+    zip_console = zipfile.ZipFile('ml-latest-small.zip', 'r')
+    for name in zip_console.namelist():
+        zip_console.extract(name, './')
+# %% Format datasets
+
+
+def ReadData(data_dir: str) -> pd.core.frame.DataFrame:
+    return pd.read_csv(data_dir)
+
+
+def GetRandomSample(data, columns='userId', sample_number=10, seed=410) -> np.ndarray:
+    np.random.seed(seed)
+    item_uni_list = len(data[columns].unique())
+    disorder = np.random.permutation(item_uni_list)
+    return disorder[0:sample_number]
+
+
+# basic parameters
+studentId = 410
+sample_number = 50
+
+# load data & select user
+data_dir = "./ml-latest-small/ratings.csv"
+data = ReadData(data_dir).drop('timestamp', axis=1)
+sample_user = GetRandomSample(data, 'userId', sample_number, studentId)
+data_sample = data[data['userId'].isin(sample_user)]
+
+# Put data into a metrix (movieId x userId)
+index_movieId = data_sample.movieId.unique()
+index_movieId.sort()
+index_userId = sample_user
+temp = np.full((len(index_movieId), len(index_userId)), np.nan)
+Y_with_NaNs = pd.DataFrame(temp, index=index_movieId, columns=index_userId)
+# Copy data
+for user, movie, rating in iter(data_sample.values):
+    Y_with_NaNs.loc[movie, user] = rating
+
+# Put data into DaraFrame (mean has been subtracted)
+Y = data_sample.copy()
+Y['rating_nor'] = Y['rating'] - Y['rating'].mean()
+
+# %%
+
+
+def Grad(U, V, Y):
+    dU = pd.DataFrame(np.zeros((U.shape)), index=U.index)
+    dV = pd.DataFrame(np.zeros((V.shape)), index=V.index)
+    loss = 0
+    for user, movie, _, rating in iter(Y.values):
+        predict = np.dot(U.loc[user], V.loc[movie])
+        diff = np.squeeze(predict) - rating
+        loss += diff * diff
+        dU.loc[user] += 2 * diff * V.loc[movie]
+        dV.loc[movie] += 2 * diff * U.loc[user]
+    return loss, dU, dV
+
+
+# Initialize & set parameters
+latent_dimension = 2
+lr = 0.01
+U = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.columns), latent_dimension)),
+                 index=Y_with_NaNs.columns) * 0.001  # user
+V = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.index), latent_dimension)),
+                 index=Y_with_NaNs.index) * 0.001  # movies
+# %% Iteration
+iterations = 40
+learn_rate = 0.01
+for i in range(iterations):
+    loss, dU, dV = Grad(U, V, Y)
+    #loss, dU, dV = objective_gradient(Y, U, V)
+    print("Iteration", i, "MSE: ", loss)
+    U -= learn_rate * dU
+    V -= learn_rate * dV
+# %%
+
+
+def Prediction(U, V, Y):
+    Y_without_NaNs = pd.DataFrame(data=np.dot(
+        U, V.T).T + Y['rating'].mean(), columns=Y_with_NaNs.columns, index=Y_with_NaNs.index)
+    diff = Y_without_NaNs - Y_with_NaNs
+    total = diff.fillna(value=0).apply(abs).sum().sum()
+    return Y_without_NaNs, total
+
+
+prediction, loss = Prediction(U, V, Y)
+
+```
+
+#### Answer
+
+```python
+# Code for question 8 here.
+ratings = pd.read_csv("./ml-latest-small/ratings.csv") 
+Y_full = pd.DataFrame({'users': ratings['userId'], 'movies': ratings['movieId'], 'ratingsorig': ratings['rating']})
+Y_full['ratings'] = Y_full['ratingsorig'] - np.mean(Y_full['ratingsorig'])
+indexes_unique_users = ratings['userId'].unique()
+n_users = indexes_unique_users.shape[0]
+indexes_unique_movies = ratings['movieId'].unique()
+n_movies = indexes_unique_movies.shape[0]
+q = 2
+U = pd.DataFrame(np.random.normal(size=(n_users, q))*0.001, index=indexes_unique_users)
+V = pd.DataFrame(np.random.normal(size=(n_movies, q))*0.001, index=indexes_unique_movies)
+
+# max_iter should be larger, we just put 10 here for making it faster.
+U, V = SGD(Y_full, U, V, max_iter = 10, check_obj = Y_full.shape[0]) # more iterations are needed for optimization
+```
+
+```python
+plt.plot(V[0],V[1],'rx')
+plt.title('Movie map')
+plt.show()
+```
+

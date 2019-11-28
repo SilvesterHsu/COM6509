@@ -26,6 +26,20 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
             root=self.root, train=self.train, download=self.download, transform=None)
         classes = ('plane', 'car', 'bird', 'cat',
                    'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+        import numpy as np
+        labels = np.array(dataset.targets)
+        mask = np.zeros(len(labels)) == 1
+        for item in target_classes:
+            mask |= (labels == classes.index(item))
+        mask = np.where(mask)
+        self.labels = list(map(lambda x: target_classes.index(classes[x]),labels[mask]))
+        self.images = dataset.data[mask]
+
+    def __loaddata_v1(self, target_classes):
+        dataset = torchvision.datasets.CIFAR10(
+            root=self.root, train=self.train, download=self.download, transform=None)
+        classes = ('plane', 'car', 'bird', 'cat',
+                   'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
         for image, label in dataset:
             if classes[label] in target_classes:
                 self.images.append(image)

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 
 torch.manual_seed(1720410)
 IMAGE_SIZE = torch.Size([3,32,32])
@@ -55,7 +57,6 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
             image = self.transform(image)
         return image, label
 
-
 transform = {
     'raw': transforms.Compose([
         transforms.ToTensor(),
@@ -67,14 +68,12 @@ transform = {
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])}
 
-
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
     npimg = img.numpy()
     npimg = np.clip(npimg,0,1)
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
-
 
 classes = ('cat', 'dog')
 trainset = {'raw':CIFAR10Dataset(classes, root='./data', train=True,
@@ -89,7 +88,6 @@ trainloader = {'raw':torch.utils.data.DataLoader(trainset['raw'], batch_size=BAT
                                                          shuffle=False, num_workers=2)
             }
 
-
 images, labels = next(iter(trainloader['raw']))
 imshow(torchvision.utils.make_grid(images))
 print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
@@ -97,7 +95,6 @@ print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 images, labels = next(iter(trainloader['noise']))
 imshow(torchvision.utils.make_grid(images))
 print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
-
 
 for p in ['raw','noise']:
     c,cat_tensor = 0,torch.zeros([10,3,32,32])
@@ -112,3 +109,44 @@ for p in ['raw','noise']:
     print(p)
     imshow(torchvision.utils.make_grid(cat_tensor))
     imshow(torchvision.utils.make_grid(dog_tensor))
+
+# %%
+class PCA(PCA):
+    def plot_eigenfaces(self,w=32,h=32,c=3):
+        eigenfaces = self.components_.reshape(-1,w,h,c)
+        eigenface_titles = ["eigenface %d" %
+                                  i for i in range(eigenfaces.shape[0])]
+        self.__plot_gallery(eigenfaces,eigenface_titles)
+
+    def __plot_gallery(self, images, titles, n_row=3, n_col=4):
+        """Helper function to plot a gallery of portraits"""
+        plt.figure(figsize=(1.8 * n_col, 2.4 * n_row))
+        plt.subplots_adjust(bottom=0, left=.01, right=.99, top=.90, hspace=.35)
+        for i in range(n_row * n_col):
+            plt.subplot(n_row, n_col, i + 1)
+            plt.imshow(np.clip(images[i]*20,0,1), cmap=plt.cm.gray)
+            plt.title(titles[i], size=12)
+            plt.xticks(())
+            plt.yticks(())
+        plt.show()
+
+    def plot_curve(self, data, title = None, xlabel = None, ylabel = None):
+        plt.plot(range(1, data.shape[0] + 1), data)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.show()
+
+trainset_reshape = trainset['raw'].images.reshape(trainset['raw'].images.shape[0],-1)
+pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
+pca_intmde = pca.fit(trainset_reshape)
+pca_intmde.plot_eigenfaces()
+variance_ratio = np.cumsum(pca_intmde.explained_variance_ratio_)
+pca_intmde.plot_curve(variance_ratio,
+            'Cumulative variance ratio of principal components',
+            'Principle component number')
+
+# %%
+sellect_ratio = np.linspace(variance_ratio.min(),1,7+2)[1:-1]
+sellect_feature_index = [np.where(variance_ratio<=ratio)[0][-1] for ratio in sellect_ratio]
+sellect_feature_index

@@ -6,6 +6,9 @@ import torchvision
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import roc_curve, auc, accuracy_score
+from sklearn.linear_model import LogisticRegression
 
 torch.manual_seed(1720410)
 IMAGE_SIZE = torch.Size([3,32,32])
@@ -65,6 +68,13 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
             image = self.transform(image)
         return image, label
 
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    npimg = np.clip(npimg,0,1)
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
+
 transform = {
     'raw': transforms.Compose([
         transforms.ToTensor(),
@@ -75,13 +85,6 @@ transform = {
         transforms.Lambda(lambda x: x + SCALE * NOISE),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])}
-
-def imshow(img):
-    img = img / 2 + 0.5     # unnormalize
-    npimg = img.numpy()
-    npimg = np.clip(npimg,0,1)
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
 
 classes = ('cat', 'dog')
 data_source = {'train':True,'test':False}
@@ -161,25 +164,21 @@ class PCA(PCA):
         scale = max(abs(images_recovery.max()),abs(images_recovery.min()))
         self.__plot_gallery(images_recovery/scale,n_row=1,n_col=5)
 
-def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True):
+def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True,ROC = True, LR = False):
     # Classifier
     # print('Train with Naive Bayes Classifier')
-    from sklearn.naive_bayes import GaussianNB
-    from sklearn.metrics import roc_curve, auc
-    model = GaussianNB()
-    if reduce:
-        train_x_feature = pca.getFeature(train_x,k)
+    if LR:
+        model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5)
+        train_x_feature = pca.getFeature(train_x,k) if reduce else train_x
+        model.fit(train_x_feature, train_y)
     else:
-        train_x_feature = train_x
-    model.fit(train_x_feature, train_y)
+        model = GaussianNB()
+        train_x_feature = pca.getFeature(train_x,k) if reduce else train_x
+        model.fit(train_x_feature, train_y)
 
     # Train Acc
     train_pre = model.predict(train_x_feature)
     train_true = np.array(train_y)
-
-    loss = (train_pre-train_true).dot((train_pre-train_true))
-    train_accurate = 1 - loss/train_true.shape[0]
-    print('Train Accurate:', train_accurate)
 
     # Test Acc
     if reduce:
@@ -191,17 +190,23 @@ def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True):
     test_pre_proba = model.predict_proba(test_x_feature)
     test_true = np.array(test_y)
 
-    def get_roc(y, y_proba, class_num = 1):
-        fpr,tpr,_=roc_curve(y, y_proba[:,class_num])
-        roc_auc = auc(fpr, tpr)
-        return fpr,tpr,roc_auc
+    test_accurate = accuracy_score(test_true, test_pre)
+    train_accurate = accuracy_score(train_true, train_pre)
 
-    fpr,tpr,roc_auc = get_roc(test_true,test_pre_proba)
-
-    loss = (test_pre-test_true).dot((test_pre-test_true))
-    test_accurate = 1 - loss/test_true.shape[0]
+    print('Train Accurate:', train_accurate,'\n')
     print('Test Accurate:', test_accurate,'\n')
-    return train_accurate, test_accurate, fpr, tpr, roc_auc
+
+    if ROC == True:
+        # Evaluate
+        def get_roc(y, y_proba, class_num = 1):
+            fpr,tpr,_=roc_curve(y, y_proba[:,class_num])
+            roc_auc = auc(fpr, tpr)
+            return fpr,tpr,roc_auc
+
+        fpr,tpr,roc_auc = get_roc(test_true,test_pre_proba)
+        return train_accurate, test_accurate, fpr, tpr, roc_auc
+
+    return train_accurate, test_accurate
 
 def plot_roc(roc_dict):
     plt.title('ROC')
@@ -222,6 +227,11 @@ def plot_roc(roc_dict):
 train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
 train_x = train_x.reshape(train_x.shape[0],-1)
 train_y = dataset['train']['raw'].labels
+
+test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
+test_x = test_x.reshape(test_x.shape[0],-1)
+test_y = dataset['test']['raw'].labels
+
 pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
 
 pca = pca.fit(train_x)
@@ -233,12 +243,12 @@ pca.plot_curve(variance_ratio,
 
 sellect_ratio = np.linspace(variance_ratio.min(),1,7+2)[1:-1]
 sellect_feature_index = [np.where(variance_ratio<=ratio)[0][-1] for ratio in sellect_ratio]
-sellect_feature_index
+
 
 test_acc_list = list()
 roc_dict = dict()
 # original features
-_,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k,reduce = False)
+_,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k = 0,reduce = False)
 test_acc_list.append(test_acc)
 roc_dict['original'] = {'fpr':fpr,'tpr':tpr,'auc':auc}
 # seven on PCA features
@@ -264,8 +274,12 @@ for i in sellect_feature_index:
 
 
 plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],test_acc_list)
+plt.title('Accurate')
 plt.show()
 plot_roc(roc_dict)
+plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],[v['auc'] for k,v in roc_dict.items()])
+plt.title('AUC')
+plt.show()
 
 # %% Test k from 1 to 300
 test_acc_list = list()
@@ -302,6 +316,11 @@ sellect_feature_index
 
 test_acc_list = list()
 roc_dict = dict()
+# original features
+_,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k,reduce = False)
+test_acc_list.append(test_acc)
+roc_dict['original'] = {'fpr':fpr,'tpr':tpr,'auc':auc}
+# seven on PCA features
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
@@ -322,6 +341,120 @@ for i in sellect_feature_index:
     test_acc_list.append(test_acc)
     roc_dict[k] = {'fpr':fpr,'tpr':tpr,'auc':auc}
 
-plt.bar(range(1,8),test_acc_list)
+plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],test_acc_list)
+plt.title('Accurate')
 plt.show()
 plot_roc(roc_dict)
+plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],[v['auc'] for k,v in roc_dict.items()])
+plt.title('AUC')
+plt.show()
+
+# %% 10 classifier
+transform = {
+    'raw': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]),
+    'noise': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x + SCALE * NOISE),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])}
+
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+data_source = {'train':True,'test':False}
+data_process = ('raw','noise')
+
+dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
+                    download=True, transform=transform[p]) for p in data_process} for k,v in data_source.items()}
+
+loader = {k: {p: torch.utils.data.DataLoader(dataset[k][p], batch_size=BATCH,
+                    shuffle=False, num_workers=2) for p in data_process} for k in data_source}
+
+images, labels = next(iter(loader['train']['raw']))
+imshow(torchvision.utils.make_grid(images))
+print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
+
+images, labels = next(iter(loader['train']['noise']))
+imshow(torchvision.utils.make_grid(images))
+print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
+
+
+# PCA
+train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
+train_x = train_x.reshape(train_x.shape[0],-1)
+train_y = dataset['train']['raw'].labels
+
+test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
+test_x = test_x.reshape(test_x.shape[0],-1)
+test_y = dataset['test']['raw'].labels
+
+pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
+
+pca = pca.fit(train_x)
+pca.plot_eigenfaces()
+variance_ratio = np.cumsum(pca.explained_variance_ratio_)
+pca.plot_curve(variance_ratio,
+            'Cumulative variance ratio of principal components',
+            'Principle component number')
+
+sellect_ratio = np.linspace(variance_ratio.min(),1,3+2)[1:-1]
+sellect_feature_index = [np.where(variance_ratio<=ratio)[0][-1] for ratio in sellect_ratio]
+
+
+test_acc_list = list()
+# original features
+_,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k = 0,reduce = False,ROC = False)
+test_acc_list.append(test_acc)
+# seven on PCA features
+for i in sellect_feature_index:
+    k = i+1
+    print('K:',k)
+    # load train images
+    train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
+    train_x = train_x.reshape(train_x.shape[0],-1)
+    train_y = dataset['train']['raw'].labels
+    # reconstruct train images
+    train_x_recon = pca.getReconstruct(train_x,k)
+    pca.plot_image(train_x, 32, 32, 3)
+    pca.plot_image(train_x_recon, 32, 32, 3)
+    # load test images
+    test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
+    test_x = test_x.reshape(test_x.shape[0],-1)
+    test_y = dataset['test']['raw'].labels
+
+    _,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k,ROC = False)
+    test_acc_list.append(test_acc)
+
+plt.bar(['original','k1','k2','k3'],test_acc_list)
+plt.title('Naive Bayes Accurate')
+plt.show()
+# %%
+test_acc_list = list()
+# original features
+_,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k = 0,reduce = False,ROC = False,LR = True)
+test_acc_list.append(test_acc)
+# seven on PCA features
+for i in sellect_feature_index:
+    k = i+1
+    print('K:',k)
+    # load train images
+    train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
+    train_x = train_x.reshape(train_x.shape[0],-1)
+    train_y = dataset['train']['raw'].labels
+    # reconstruct train images
+    train_x_recon = pca.getReconstruct(train_x,k)
+    pca.plot_image(train_x, 32, 32, 3)
+    pca.plot_image(train_x_recon, 32, 32, 3)
+    # load test images
+    test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
+    test_x = test_x.reshape(test_x.shape[0],-1)
+    test_y = dataset['test']['raw'].labels
+
+    _,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k,ROC = False)
+    test_acc_list.append(test_acc)
+
+plt.bar(['original','k1','k2','k3'],test_acc_list)
+plt.title('Logistic Regression Accurate')
+plt.show()

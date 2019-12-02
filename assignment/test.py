@@ -161,13 +161,16 @@ class PCA(PCA):
         scale = max(abs(images_recovery.max()),abs(images_recovery.min()))
         self.__plot_gallery(images_recovery/scale,n_row=1,n_col=5)
 
-def classifier(pca,train_x,train_y,test_x,test_y,k):
+def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True):
     # Classifier
     # print('Train with Naive Bayes Classifier')
     from sklearn.naive_bayes import GaussianNB
     from sklearn.metrics import roc_curve, auc
     model = GaussianNB()
-    train_x_feature = pca.getFeature(train_x,k)
+    if reduce:
+        train_x_feature = pca.getFeature(train_x,k)
+    else:
+        train_x_feature = train_x
     model.fit(train_x_feature, train_y)
 
     # Train Acc
@@ -179,7 +182,10 @@ def classifier(pca,train_x,train_y,test_x,test_y,k):
     print('Train Accurate:', train_accurate)
 
     # Test Acc
-    test_x_feature = pca.getFeature(test_x,k)
+    if reduce:
+        test_x_feature = pca.getFeature(test_x,k)
+    else:
+        test_x_feature = test_x
 
     test_pre = model.predict(test_x_feature)
     test_pre_proba = model.predict_proba(test_x_feature)
@@ -201,9 +207,12 @@ def plot_roc(roc_dict):
     plt.title('ROC')
     i = 0
     for k,v in roc_dict.items():
-        i+=1
         fpr,tpr,auc = v['fpr'],v['tpr'],v['auc']
-        plt.plot(fpr, tpr,label='k'+str(i)+' AUC = %0.4f'% auc)
+        if k == 'original':
+            plt.plot(fpr, tpr,label='original, AUC = %0.4f'% auc)
+        else:
+            i+=1
+            plt.plot(fpr, tpr,label='k'+str(i)+', AUC = %0.4f'% auc)
     plt.legend(loc='lower right')
     plt.plot([0,1],[0,1],'r--')
     plt.ylabel('TPR')
@@ -228,6 +237,11 @@ sellect_feature_index
 
 test_acc_list = list()
 roc_dict = dict()
+# original features
+_,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k,reduce = False)
+test_acc_list.append(test_acc)
+roc_dict['original'] = {'fpr':fpr,'tpr':tpr,'auc':auc}
+# seven on PCA features
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
@@ -248,7 +262,8 @@ for i in sellect_feature_index:
     test_acc_list.append(test_acc)
     roc_dict[k] = {'fpr':fpr,'tpr':tpr,'auc':auc}
 
-plt.bar(range(1,8),test_acc_list)
+
+plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],test_acc_list)
 plt.show()
 plot_roc(roc_dict)
 

@@ -223,6 +223,29 @@ class Multiclassifier():
             roc_auc = auc(fpr, tpr)
             self.roc_dict = {'fpr':fpr,'tpr':tpr,'auc':roc_auc}
         return train_accurate,test_accurate
+
+    def LRclassifier(self):
+        model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_x, self.train_y)
+        train_accurate = accuracy_score(self.train_y, model.predict(self.train_x))
+        test_accurate = accuracy_score(self.test_y, model.predict(self.test_x))
+        test_pre_proba = model.predict_proba(self.test_x)
+
+        print('Train Accurate:', train_accurate,'\n')
+        print('Test Accurate:', test_accurate,'\n')
+
+        return train_accurate,test_accurate
+
+    def LRclassifier_raw(self):
+        model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_raw, self.train_y)
+        train_accurate = accuracy_score(self.train_y, model.predict(self.train_raw))
+        test_accurate = accuracy_score(self.test_y, model.predict(self.test_raw))
+        test_pre_proba = model.predict_proba(self.test_raw)
+
+        print('Train Accurate:', train_accurate,'\n')
+        print('Test Accurate:', test_accurate,'\n')
+
+        return train_accurate,test_accurate
+
 '''
 def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True, ROC = True, LR = False):
     # Classifier
@@ -281,7 +304,6 @@ pca.plot_curve(np.cumsum(pca.explained_variance_ratio_),
 sellect_feature_index = pca.getSample_k(7)
 
 # Part3: train with classifier
-#mode = Multiclassifier(train_x,pca.getFeature(train_x,k),train_y,test_x,pca.getFeature(test_x,k),test_y,mode = 'NB',print_ROC = True)
 mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
 roc_dict = dict()
@@ -320,7 +342,6 @@ pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
 pca = pca.fit(train_x)
 
 # Part3: train with classifier
-#mode = Multiclassifier(train_x,pca.getFeature(train_x,k),train_y,test_x,pca.getFeature(test_x,k),test_y,mode = 'NB',print_ROC = True)
 mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
 roc_dict = dict()
@@ -341,58 +362,6 @@ for i in sellect_feature_index:
     roc_dict[k] = mode.roc_dict
 
 # Part4: plot Accurate, ROC and AUC
-plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],test_acc_list)
-plt.title('Accurate')
-plt.show()
-plot_roc(roc_dict)
-plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],[v['auc'] for k,v in roc_dict.items()])
-plt.title('AUC')
-plt.show()
-
-# %% Noise
-train_x = dataset['train']['noise'].normal_images.numpy().transpose(0,2,3,1)
-train_x = train_x.reshape(train_x.shape[0],-1)
-train_y = dataset['train']['noise'].labels
-pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
-
-pca = pca.fit(train_x)
-pca.plot_eigenfaces()
-variance_ratio = np.cumsum(pca.explained_variance_ratio_)
-pca.plot_curve(variance_ratio,
-            'Cumulative variance ratio of principal components',
-            'Principle component number')
-
-sellect_ratio = np.linspace(variance_ratio.min(),1,7+2)[1:-1]
-sellect_feature_index = [np.where(variance_ratio<=ratio)[0][-1] for ratio in sellect_ratio]
-sellect_feature_index
-
-test_acc_list = list()
-roc_dict = dict()
-# original features
-_,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k,reduce = False)
-test_acc_list.append(test_acc)
-roc_dict['original'] = {'fpr':fpr,'tpr':tpr,'auc':auc}
-# seven on PCA features
-for i in sellect_feature_index:
-    k = i+1
-    print('K:',k)
-    # load train images
-    train_x = dataset['train']['noise'].normal_images.numpy().transpose(0,2,3,1)
-    train_x = train_x.reshape(train_x.shape[0],-1)
-    train_y = dataset['train']['noise'].labels
-    # reconstruct train images
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
-    # load test images
-    test_x = dataset['test']['noise'].normal_images.numpy().transpose(0,2,3,1)
-    test_x = test_x.reshape(test_x.shape[0],-1)
-    test_y = dataset['test']['noise'].labels
-
-    _,test_acc,fpr,tpr,auc = classifier(pca,train_x,train_y,test_x,test_y,k)
-    test_acc_list.append(test_acc)
-    roc_dict[k] = {'fpr':fpr,'tpr':tpr,'auc':auc}
-
 plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],test_acc_list)
 plt.title('Accurate')
 plt.show()
@@ -434,79 +403,33 @@ print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 
 
 # PCA
-train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
-train_x = train_x.reshape(train_x.shape[0],-1)
-train_y = dataset['train']['raw'].labels
+# Part1: get training dataset
+train_x,train_y = loadPCAData(dataset['train']['raw'])
+test_x,test_y = loadPCAData(dataset['test']['raw'])
 
-test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
-test_x = test_x.reshape(test_x.shape[0],-1)
-test_y = dataset['test']['raw'].labels
-
+# Part2: PCA fit and get a set of k
 pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
-
 pca = pca.fit(train_x)
-pca.plot_eigenfaces()
-variance_ratio = np.cumsum(pca.explained_variance_ratio_)
-pca.plot_curve(variance_ratio,
-            'Cumulative variance ratio of principal components',
-            'Principle component number')
+sellect_feature_index = pca.getSample_k(3)
 
-sellect_ratio = np.linspace(variance_ratio.min(),1,3+2)[1:-1]
-sellect_feature_index = [np.where(variance_ratio<=ratio)[0][-1] for ratio in sellect_ratio]
-
-
+# Part3: train with classifier
+mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
-# original features
-_,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k = 0,reduce = False,ROC = False)
+_,test_acc = mode.LRclassifier_raw()
 test_acc_list.append(test_acc)
-# seven on PCA features
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
-    # load train images
-    train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
-    train_x = train_x.reshape(train_x.shape[0],-1)
-    train_y = dataset['train']['raw'].labels
-    # reconstruct train images
+    # image reconstruction
     train_x_recon = pca.getReconstruct(train_x,k)
     pca.plot_image(train_x, 32, 32, 3)
     pca.plot_image(train_x_recon, 32, 32, 3)
-    # load test images
-    test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
-    test_x = test_x.reshape(test_x.shape[0],-1)
-    test_y = dataset['test']['raw'].labels
-
-    _,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k,ROC = False)
+    # updata k
+    mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
+    _,test_acc = mode.LRclassifier()
     test_acc_list.append(test_acc)
 
+# Part4: plot Accurate, ROC and AUC
 plt.bar(['original','k1','k2','k3'],test_acc_list)
-plt.title('Naive Bayes Accurate')
-plt.show()
-# %%
-test_acc_list = list()
-# original features
-_,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k = 0,reduce = False,ROC = False,LR = True)
-test_acc_list.append(test_acc)
-# seven on PCA features
-for i in sellect_feature_index:
-    k = i+1
-    print('K:',k)
-    # load train images
-    train_x = dataset['train']['raw'].normal_images.numpy().transpose(0,2,3,1)
-    train_x = train_x.reshape(train_x.shape[0],-1)
-    train_y = dataset['train']['raw'].labels
-    # reconstruct train images
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
-    # load test images
-    test_x = dataset['test']['raw'].normal_images.numpy().transpose(0,2,3,1)
-    test_x = test_x.reshape(test_x.shape[0],-1)
-    test_y = dataset['test']['raw'].labels
-
-    _,test_acc = classifier(pca,train_x,train_y,test_x,test_y,k,ROC = False)
-    test_acc_list.append(test_acc)
-
-plt.bar(['original','k1','k2','k3'],test_acc_list)
-plt.title('Logistic Regression Accurate')
+plt.title('Accurate')
 plt.show()

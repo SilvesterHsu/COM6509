@@ -13,11 +13,20 @@ from sklearn.linear_model import LogisticRegression
 torch.manual_seed(1720410)
 IMAGE_SIZE = torch.Size([3,32,32])
 NOISE = torch.rand(IMAGE_SIZE)
-SCALE = 0.3
-BATCH = 8
+SCALE = 0.4
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+BATCH = 8 if device == torch.device("cpu") else 1000
 
 # %% Q1
 class CIFAR10Dataset(torch.utils.data.Dataset):
+    '''CIFAR10Dataset
+
+    Custom data collection loading method. Extract data from selected labels only.
+    For example:
+        target_classes  = ('cat','dog') # Extract cat and dog data
+        target_classes  = ('cat','dog','bird','ship') # Extract cat, dog, bird and ship data
+
+    '''
     def __init__(self, target_classes, root='./data', train=True, download=True, transform=None):
         self.images = list()
         self.labels = list()
@@ -43,6 +52,7 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
         self.labels = list(map(lambda x: target_classes.index(classes[x]),labels[mask]))
         self.images = dataset.data[mask]
 
+    # Normalize all the dataset
     def NormalizeALL(self):
         normal = torch.zeros(self.images.shape[0],*IMAGE_SIZE)
         for i in range(self.images.shape[0]):
@@ -57,15 +67,23 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
         label = self.labels[idx]
         if self.transform:
             image = self.transform(image)
-        return image, label
+        return torch.clamp(image,-1,1), label
 
-def imshow(img):
-    img = img / 2 + 0.5     # unnormalize
+# show images from pytorch loader
+def imshow(img,title = None):
+    img = img / 2 + 0.5
     npimg = img.numpy()
-    npimg = np.clip(npimg,0,1)
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    if title:
+        plt.title(title)
     plt.show()
 
+# basic parameters
+classes = ('cat', 'dog')
+data_source = {'train':True,'test':False}
+data_process = ('raw','noise')
+
+# set transform for dataset
 transform = {
     'raw': transforms.Compose([
         transforms.ToTensor(),
@@ -76,25 +94,16 @@ transform = {
         transforms.Lambda(lambda x: x + SCALE * NOISE),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])}
-
-classes = ('cat', 'dog')
-data_source = {'train':True,'test':False}
-data_process = ('raw','noise')
-
-dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
+# load 4 different datasets:
+# train with raw data, train with noise data
+# test with raw data, test with noise data
+CatDog = dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
                     download=True, transform=transform[p]) for p in data_process} for k,v in data_source.items()}
-
+# define loader to get batch for deep network training
 loader = {k: {p: torch.utils.data.DataLoader(dataset[k][p], batch_size=BATCH,
                     shuffle=False, num_workers=2) for p in data_process} for k in data_source}
-
-images, labels = next(iter(loader['train']['raw']))
-imshow(torchvision.utils.make_grid(images))
-print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
-
-images, labels = next(iter(loader['train']['noise']))
-imshow(torchvision.utils.make_grid(images))
-print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
-
+# Show 10 pairs of original and noisy images of cats
+# and 10 pairs of original and noisy images of dogs
 for p in data_process:
     c,cat_tensor = 0,torch.zeros([10,3,32,32])
     d,dog_tensor = 0,torch.zeros([10,3,32,32])
@@ -106,10 +115,11 @@ for p in data_process:
             dog_tensor[d] = image
             d += 1
     print(p)
-    imshow(torchvision.utils.make_grid(cat_tensor))
-    imshow(torchvision.utils.make_grid(dog_tensor))
+    imshow(torchvision.utils.make_grid(cat_tensor,nrow=5),'Cats ({})'.format(p))
+    imshow(torchvision.utils.make_grid(dog_tensor,nrow=5),'Dogs ({})'.format(p))
 
 # %% Q2
+# plot roc data
 def plot_roc(roc_dict):
     plt.title('ROC')
     i = 0
@@ -126,12 +136,17 @@ def plot_roc(roc_dict):
     plt.xlabel('FPR')
     plt.show()
 
+# Separate the input and labels from the dataset and flatten the input
 def loadPCAData(data):
     x = data.normal_images.numpy().transpose(0,2,3,1).reshape(data.length,-1)
     y = np.array(data.labels)
     return x,y
 
 class PCA(PCA):
+    '''PCA
+    Redefining the PCA class, inherited from the parent PCA.
+    Add several problem-specific functions to PCA.
+    '''
     def plot_eigenfaces(self,w=32,h=32,c=3):
         eigenfaces = self.components_.reshape(-1,w,h,c)
         eigenface_titles = ["feature %d" %
@@ -171,7 +186,7 @@ class PCA(PCA):
         reconstruct_data = feature_data.dot(self.components_[:k])
         return reconstruct_data
 
-    def plot_image(self,images,w,h,c):
+    def plot_image(self,images,w,h,c,title = None):
         images_recovery = images.reshape(images.shape[0],w,h,c)[:5]
         scale = max(abs(images_recovery.max()),abs(images_recovery.min()))
         self.__plot_gallery(images_recovery/scale,n_row=1,n_col=5)
@@ -183,6 +198,9 @@ class PCA(PCA):
         return sellect_feature_index
 
 class Multiclassifier():
+    '''Multiclassifier
+    A collection of classifiers for easy invocation
+    '''
     def __init__(self,train_raw,train_y,test_raw,test_y,print_ROC = False):
         self.print_ROC = print_ROC
         self.train_raw = train_raw
@@ -200,7 +218,7 @@ class Multiclassifier():
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_x))
         test_pre_proba = model.predict_proba(self.test_x)
 
-        print('Train Accurate:', train_accurate,'\n')
+        print('Train Accurate:', train_accurate)
         print('Test Accurate:', test_accurate,'\n')
 
         if self.print_ROC:
@@ -217,7 +235,7 @@ class Multiclassifier():
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_raw))
         test_pre_proba = model.predict_proba(self.test_raw)
 
-        print('Train Accurate:', train_accurate,'\n')
+        print('Train Accurate:', train_accurate)
         print('Test Accurate:', test_accurate,'\n')
 
         if self.print_ROC:
@@ -233,7 +251,7 @@ class Multiclassifier():
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_x))
         test_pre_proba = model.predict_proba(self.test_x)
 
-        print('Train Accurate:', train_accurate,'\n')
+        print('Train Accurate:', train_accurate)
         print('Test Accurate:', test_accurate,'\n')
 
         confusion = [model.predict(self.test_x),self.test_y]
@@ -245,7 +263,7 @@ class Multiclassifier():
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_raw))
         test_pre_proba = model.predict_proba(self.test_raw)
 
-        print('Train Accurate:', train_accurate,'\n')
+        print('Train Accurate:', train_accurate)
         print('Test Accurate:', test_accurate,'\n')
 
         confusion = [model.predict(self.test_raw), self.test_y]
@@ -255,10 +273,10 @@ class Multiclassifier():
 train_x,train_y = loadPCAData(dataset['train']['raw'])
 test_x,test_y = loadPCAData(dataset['test']['raw'])
 
-# Part2: PCA fit and get a set of k
+# Part2: PCA fit and get a set of k choices
 pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
 pca = pca.fit(train_x)
-pca.plot_eigenfaces()
+#pca.plot_eigenfaces()
 pca.plot_curve(np.cumsum(pca.explained_variance_ratio_),
             'Cumulative variance ratio of principal components',
             'Principle component number')
@@ -268,16 +286,17 @@ sellect_feature_index = pca.getSample_k(7)
 mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
 roc_dict = dict()
+print('Raw')
 _,test_acc,_ = mode.NBclassifier_raw()
 test_acc_list.append(test_acc)
 roc_dict['original'] = mode.roc_dict
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
-    # image reconstruction
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
+    # show image reconstruction
+    #train_x_recon = pca.getReconstruct(train_x,k)
+    #pca.plot_image(train_x, 32, 32, 3)
+    #pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
     _,test_acc,_ = mode.NBclassifier()
@@ -290,7 +309,7 @@ plt.title('Accurate')
 plt.show()
 plot_roc(roc_dict)
 plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],[v['auc'] for k,v in roc_dict.items()])
-plt.title('AUC')
+plt.title('Area under the ROC curve')
 plt.show()
 
 # %% Noise
@@ -313,9 +332,9 @@ for i in sellect_feature_index:
     k = i+1
     print('K:',k)
     # image reconstruction
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
+    #train_x_recon = pca.getReconstruct(train_x,k)
+    #pca.plot_image(train_x, 32, 32, 3)
+    #pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
     _,test_acc,_ = mode.NBclassifier()
@@ -328,10 +347,11 @@ plt.title('Accurate')
 plt.show()
 plot_roc(roc_dict)
 plt.bar(['original','k1','k2','k3','k4','k5','k6','k7'],[v['auc'] for k,v in roc_dict.items()])
-plt.title('AUC')
+plt.title('Area under the ROC curve')
 plt.show()
 
 # %% 10 classifier
+# set transform for dataset
 transform = {
     'raw': transforms.Compose([
         transforms.ToTensor(),
@@ -533,4 +553,107 @@ for i in range(n_row * n_col):
     plt.yticks(())
 plt.show()
 
+# %% Q4
+transform = {
+    'raw': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]),
+    'noise': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x + SCALE * NOISE),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])}
+
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+data_source = {'train':True,'test':False}
+data_process = ('raw','noise')
+
+dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
+                    download=True, transform=transform[p]) for p in data_process} for k,v in data_source.items()}
+
+loader = {k: {p: torch.utils.data.DataLoader(dataset[k][p], batch_size=BATCH,
+                    shuffle=False, num_workers=2) for p in data_process} for k in data_source}
+
+images, labels = next(iter(loader['train']['raw']))
+imshow(torchvision.utils.make_grid(images))
+print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
+
+images, labels = next(iter(loader['train']['noise']))
+imshow(torchvision.utils.make_grid(images))
+print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 # %%
+class Autoencoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            # 1 input image channel, 16 output channel, 3x3 square convolution
+            nn.Conv2d(3, 16, 3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, 3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 7)
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, 7),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 16, 3, stride=2, padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 3, 3, stride=2, padding=1, output_padding=1),
+            #nn.Sigmoid()  #to range [0, 1]
+            nn.Tanh()
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+trainloader_noise = loader['train']['noise']
+trainloader_raw = loader['train']['raw']
+
+net = Autoencoder()
+net.to(device)
+criterion = nn.MSELoss()
+#criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=1e-5)
+#optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+for epoch in range(1):
+    running_loss = 0.0
+    data_iter = iter(trainloader_raw)
+    for i,data_noise in enumerate(trainloader_noise,0):
+        data_raw = next(data_iter)
+        inputs_raw = data_raw[0].to(device)
+        inputs_noise = data_noise[0].to(device)
+        optimizer.zero_grad()
+        recon = net(inputs_noise)
+        loss = criterion(recon, inputs_raw)
+
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        if i % 200 == 199:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 200))
+            running_loss = 0.0
+print('Finished Training')
+
+testloader_noise = loader['test']['noise']
+testloader_raw = loader['test']['raw']
+
+with torch.no_grad():
+    #data_iter = iter(trainloader_raw)
+    #for data_noise in testloader_noise
+    inputs_noise,_ = next(iter(testloader_noise))
+    recon = net(inputs_noise)
+    loss = criterion(inputs_noise,recon)
+
+imshow(torchvision.utils.make_grid(inputs_noise[:2]))
+imshow(torchvision.utils.make_grid(recon[:2]))
+loss
+device == torch.device("cpu")

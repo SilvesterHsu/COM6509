@@ -1,4 +1,5 @@
 %matplotlib inline
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -70,9 +71,11 @@ class CIFAR10Dataset(torch.utils.data.Dataset):
         return torch.clamp(image,-1,1), label
 
 # show images from pytorch loader
-def imshow(img,title = None):
+def imshow(img,title = None,size = None):
     img = img / 2 + 0.5
     npimg = img.numpy()
+    if size:
+        plt.figure(figsize=size)
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     if title:
         plt.title(title)
@@ -213,7 +216,12 @@ class Multiclassifier():
         self.test_x = test_x
 
     def NBclassifier(self):
+        tic = time.time()
         model = GaussianNB().fit(self.train_x, self.train_y)
+        self.train_time = time.time() - tic
+        tic = time.time()
+        _ = model.predict(self.test_x)
+        self.test_time = time.time() - tic
         train_accurate = accuracy_score(self.train_y, model.predict(self.train_x))
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_x))
         test_pre_proba = model.predict_proba(self.test_x)
@@ -230,7 +238,12 @@ class Multiclassifier():
         return train_accurate,test_accurate,confusion
 
     def NBclassifier_raw(self):
+        tic = time.time()
         model = GaussianNB().fit(self.train_raw, self.train_y)
+        self.train_time = time.time() - tic
+        tic = time.time()
+        _ = model.predict(self.test_raw)
+        self.test_time = time.time() - tic
         train_accurate = accuracy_score(self.train_y, model.predict(self.train_raw))
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_raw))
         test_pre_proba = model.predict_proba(self.test_raw)
@@ -246,7 +259,12 @@ class Multiclassifier():
         return train_accurate,test_accurate,confusion
 
     def LRclassifier(self):
+        tic = time.time()
         model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_x, self.train_y)
+        self.train_time = time.time() - tic
+        tic = time.time()
+        _ = model.predict(self.test_x)
+        self.test_time = time.time() - tic
         train_accurate = accuracy_score(self.train_y, model.predict(self.train_x))
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_x))
         test_pre_proba = model.predict_proba(self.test_x)
@@ -258,7 +276,12 @@ class Multiclassifier():
         return train_accurate,test_accurate,confusion
 
     def LRclassifier_raw(self):
+        tic = time.time()
         model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_raw, self.train_y)
+        self.train_time = time.time() - tic
+        tic = time.time()
+        _ = model.predict(self.test_raw)
+        self.test_time = time.time() - tic
         train_accurate = accuracy_score(self.train_y, model.predict(self.train_raw))
         test_accurate = accuracy_score(self.test_y, model.predict(self.test_raw))
         test_pre_proba = model.predict_proba(self.test_raw)
@@ -373,7 +396,7 @@ dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
 
 loader = {k: {p: torch.utils.data.DataLoader(dataset[k][p], batch_size=BATCH,
                     shuffle=False, num_workers=2) for p in data_process} for k in data_source}
-
+'''
 images, labels = next(iter(loader['train']['raw']))
 imshow(torchvision.utils.make_grid(images))
 print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
@@ -381,8 +404,11 @@ print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 images, labels = next(iter(loader['train']['noise']))
 imshow(torchvision.utils.make_grid(images))
 print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
-
+'''
 confusion_matrix_collect = list()
+accuracy_collect = list()
+train_time_collect = list()
+test_time_collect = list()
 #%% 4 Naive Bayes
 # Part1: get training dataset
 train_x,train_y = loadPCAData(dataset['train']['raw'])
@@ -396,26 +422,35 @@ sellect_feature_index = pca.getSample_k(3)
 # Part3: train with classifier
 mode = Multiclassifier(train_x,train_y,test_x,test_y)
 test_acc_list = list()
+
 _,test_acc,confusion = mode.NBclassifier_raw()
 test_acc_list.append(test_acc)
+# collect data
 confusion_matrix_collect.append(confusion)
+accuracy_collect.append(test_acc)
+train_time_collect.append(mode.train_time)
+test_time_collect.append(mode.test_time)
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
     # image reconstruction
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
+    #train_x_recon = pca.getReconstruct(train_x,k)
+    #pca.plot_image(train_x, 32, 32, 3)
+    #pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
     _,test_acc,confusion = mode.NBclassifier()
     test_acc_list.append(test_acc)
+    # collect data
     confusion_matrix_collect.append(confusion)
+    accuracy_collect.append(test_acc)
+    train_time_collect.append(mode.train_time)
+    test_time_collect.append(mode.test_time)
 
 # Part4: plot Accurate, ROC and AUC
-plt.bar(['original','k1','k2','k3'],test_acc_list)
-plt.title('4 Naive Bayes Accurate')
-plt.show()
+#plt.bar(['original','k1','k2','k3'],test_acc_list)
+#plt.title('4 Naive Bayes Accurate')
+#plt.show()
 
 #%% 4 Logistic Regression
 # PCA
@@ -433,24 +468,32 @@ mode = Multiclassifier(train_x,train_y,test_x,test_y)
 test_acc_list = list()
 _,test_acc,confusion = mode.LRclassifier_raw()
 test_acc_list.append(test_acc)
+# collect data
 confusion_matrix_collect.append(confusion)
+accuracy_collect.append(test_acc)
+train_time_collect.append(mode.train_time)
+test_time_collect.append(mode.test_time)
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
     # image reconstruction
-    train_x_recon = pca.getReconstruct(train_x,k)
-    pca.plot_image(train_x, 32, 32, 3)
-    pca.plot_image(train_x_recon, 32, 32, 3)
+    #train_x_recon = pca.getReconstruct(train_x,k)
+    #pca.plot_image(train_x, 32, 32, 3)
+    #pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
     _,test_acc,confusion = mode.LRclassifier()
     test_acc_list.append(test_acc)
+    # collect data
     confusion_matrix_collect.append(confusion)
+    accuracy_collect.append(test_acc)
+    train_time_collect.append(mode.train_time)
+    test_time_collect.append(mode.test_time)
 
 # Part4: plot Accurate, ROC and AUC
-plt.bar(['original','k1','k2','k3'],test_acc_list)
-plt.title('4 Logistic Regression Accurate')
-plt.show()
+#plt.bar(['original','k1','k2','k3'],test_acc_list)
+#plt.title('4 Logistic Regression Accurate')
+#plt.show()
 
 # %% 1 CNN
 import torch.nn as nn
@@ -486,7 +529,8 @@ net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(2):  # loop over the dataset multiple times
+tic = time.time()
+for epoch in range(3):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -509,11 +553,12 @@ for epoch in range(2):  # loop over the dataset multiple times
                   (epoch + 1, i + 1, running_loss / 2000))
             running_loss = 0.0
 print('Finished Training')
-
+train_time_collect.append(time.time() - tic)
 correct = 0
 total = 0
 confusion = [torch.zeros(len(testloader),BATCH) for i in range(2)]
 i = 0
+tic = time.time()
 with torch.no_grad():
     for data in testloader:
         images, labels = data[0].to(device), data[1].to(device)
@@ -524,12 +569,28 @@ with torch.no_grad():
         i += 1
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
-
+test_time_collect.append(time.time()-tic)
 print('Accuracy of the network on the 10000 test images: %d %%' % (
     100 * correct / total))
 confusion = [confusion[i].view(-1).numpy() for i in range(2)]
 confusion_matrix_collect.append(confusion)
-
+accuracy_collect.append(correct / total)
+# %% plot the classification accuracy, total training time, and total test time
+catagory = ['NB','LR']
+title = ['raw','k1','k2','k3']
+titles = [c+' '+t for c in catagory for t in title] + ['CNN']
+plt.figure(figsize=(10, 5))
+plt.bar(titles,accuracy_collect)
+plt.title("Classification Accuracy",size = 18)
+plt.show()
+plt.figure(figsize=(10, 5))
+plt.bar(titles,train_time_collect)
+plt.title("Training Time",size = 18)
+plt.show()
+plt.figure(figsize=(10, 5))
+plt.bar(titles,test_time_collect)
+plt.title("Testing Time",size = 18)
+plt.show()
 # %% confusion matrix
 from sklearn.metrics import confusion_matrix
 import seaborn as sns; sns.set()
@@ -552,8 +613,8 @@ for i in range(n_row * n_col):
     plt.xticks(())
     plt.yticks(())
 plt.show()
-
 # %% Q4
+# set transform for dataset
 transform = {
     'raw': transforms.Compose([
         transforms.ToTensor(),
@@ -570,19 +631,15 @@ classes = ('plane', 'car', 'bird', 'cat',
 data_source = {'train':True,'test':False}
 data_process = ('raw','noise')
 
+# load 4 different datasets:
+# train with raw data, train with noise data
+# test with raw data, test with noise data
 dataset = {k: {p: CIFAR10Dataset(classes, root='./data', train=v,
                     download=True, transform=transform[p]) for p in data_process} for k,v in data_source.items()}
 
 loader = {k: {p: torch.utils.data.DataLoader(dataset[k][p], batch_size=BATCH,
                     shuffle=False, num_workers=2) for p in data_process} for k in data_source}
 
-images, labels = next(iter(loader['train']['raw']))
-imshow(torchvision.utils.make_grid(images))
-print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
-
-images, labels = next(iter(loader['train']['noise']))
-imshow(torchvision.utils.make_grid(images))
-print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 # %%
 class Autoencoder(nn.Module):
     def __init__(self):
@@ -610,50 +667,91 @@ class Autoencoder(nn.Module):
         x = self.decoder(x)
         return x
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 trainloader_noise = loader['train']['noise']
 trainloader_raw = loader['train']['raw']
 
 net = Autoencoder()
 net.to(device)
-criterion = nn.MSELoss()
-#criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=1e-5)
-#optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(1):
-    running_loss = 0.0
-    data_iter = iter(trainloader_raw)
-    for i,data_noise in enumerate(trainloader_noise,0):
-        data_raw = next(data_iter)
-        inputs_raw = data_raw[0].to(device)
-        inputs_noise = data_noise[0].to(device)
-        optimizer.zero_grad()
-        recon = net(inputs_noise)
-        loss = criterion(recon, inputs_raw)
+def trainNet(lr = 0.001):
+    criterion = nn.MSELoss()
+    #criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=1e-5)
+    #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-        loss.backward()
-        optimizer.step()
+    for epoch in range(2):
+        running_loss = 0.0
+        data_iter = iter(trainloader_raw)
+        for i,data_noise in enumerate(trainloader_noise,0):
+            data_raw = next(data_iter)
+            inputs_raw = data_raw[0].to(device)
+            inputs_noise = data_noise[0].to(device)
+            optimizer.zero_grad()
+            recon = net(inputs_noise)
+            loss = criterion(recon, inputs_raw)
 
-        running_loss += loss.item()
-        if i % 200 == 199:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 200))
-            running_loss = 0.0
-print('Finished Training')
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+            if i % 200 == 199:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 200))
+                running_loss = 0.0
+    print('Finished Training')
+
+trainNet(lr = 0.001)
 
 testloader_noise = loader['test']['noise']
 testloader_raw = loader['test']['raw']
 
-with torch.no_grad():
-    #data_iter = iter(trainloader_raw)
-    #for data_noise in testloader_noise
-    inputs_noise,_ = next(iter(testloader_noise))
-    recon = net(inputs_noise)
-    loss = criterion(inputs_noise,recon)
 
-imshow(torchvision.utils.make_grid(inputs_noise[:2]))
-imshow(torchvision.utils.make_grid(recon[:2]))
-loss
-device == torch.device("cpu")
+# collect loss
+loss = torch.zeros(len(testloader_noise),BATCH)
+with torch.no_grad():
+    data_iter = iter(testloader_raw)
+    for i,data_noise in enumerate(testloader_noise,0):
+        data_raw = next(data_iter)
+        inputs_raw = data_raw[0].to(device)
+        inputs_noise = data_noise[0].to(device)
+        recon = net(inputs_noise)
+        for j in range(len(inputs)):
+            loss[i,j] = criterion(inputs_noise[j],recon[j])
+
+top_list = loss.view(-1).topk(30+1)[-1]
+index_list = dict()
+for d in top_list:
+    k,v = divmod(d.item(),8)
+    index_list[k] = v
+
+# get top 30 images with highest loss
+worst_data = torch.zeros(30*2,*IMAGE_SIZE)
+l = 0
+with torch.no_grad():
+    data_iter = iter(testloader_raw)
+    for i,data_noise in enumerate(testloader_noise,0):
+        data_raw = next(data_iter)
+        inputs_raw = data_raw[0].to(device)
+        inputs_noise = data_noise[0].to(device)
+        if i in index_list:
+            worst_data[l] = inputs_noise[index_list[i]]
+            worst_data[l+1] = inputs_raw[index_list[i]]
+            l += 2
+
+imshow(torchvision.utils.make_grid(worst_data,nrow=4),size = (10,30))
+
+# %%
+def MSE():
+    loss = 0
+    with torch.no_grad():
+        data_iter = iter(testloader_raw)
+        for i,data_noise in enumerate(testloader_noise,0):
+            data_raw = next(data_iter)
+            inputs_raw = data_raw[0].to(device)
+            inputs_noise = data_noise[0].to(device)
+            recon = net(inputs_noise)
+            loss += criterion(recon, inputs_raw)
+    return loss
+MSE = MSE()
+MSE.item()

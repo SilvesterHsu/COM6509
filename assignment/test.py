@@ -207,7 +207,9 @@ class Multiclassifier():
             fpr,tpr,_ = roc_curve(self.test_y, test_pre_proba[:,1])
             roc_auc = auc(fpr, tpr)
             self.roc_dict = {'fpr':fpr,'tpr':tpr,'auc':roc_auc}
-        return train_accurate,test_accurate
+
+        confusion = [model.predict(self.test_x),self.test_y]
+        return train_accurate,test_accurate,confusion
 
     def NBclassifier_raw(self):
         model = GaussianNB().fit(self.train_raw, self.train_y)
@@ -222,7 +224,8 @@ class Multiclassifier():
             fpr,tpr,_ = roc_curve(self.test_y, test_pre_proba[:,1])
             roc_auc = auc(fpr, tpr)
             self.roc_dict = {'fpr':fpr,'tpr':tpr,'auc':roc_auc}
-        return train_accurate,test_accurate
+        confusion = [model.predict(self.test_raw), self.test_y]
+        return train_accurate,test_accurate,confusion
 
     def LRclassifier(self):
         model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_x, self.train_y)
@@ -233,7 +236,8 @@ class Multiclassifier():
         print('Train Accurate:', train_accurate,'\n')
         print('Test Accurate:', test_accurate,'\n')
 
-        return train_accurate,test_accurate
+        confusion = [model.predict(self.test_x),self.test_y]
+        return train_accurate,test_accurate,confusion
 
     def LRclassifier_raw(self):
         model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5).fit(self.train_raw, self.train_y)
@@ -244,52 +248,9 @@ class Multiclassifier():
         print('Train Accurate:', train_accurate,'\n')
         print('Test Accurate:', test_accurate,'\n')
 
-        return train_accurate,test_accurate
+        confusion = [model.predict(self.test_raw), self.test_y]
+        return train_accurate,test_accurate,confusion
 
-'''
-def classifier(pca,train_x,train_y,test_x,test_y,k,reduce = True, ROC = True, LR = False):
-    # Classifier
-    if LR:
-        model =LogisticRegression(solver='sag',multi_class='multinomial',tol=0.5)
-        train_x_feature = pca.getFeature(train_x,k) if reduce else train_x
-        model.fit(train_x_feature, train_y)
-    else:
-        model = GaussianNB()
-        train_x_feature = pca.getFeature(train_x,k) if reduce else train_x
-        model.fit(train_x_feature, train_y)
-
-    # Train Acc
-    train_pre = model.predict(train_x_feature)
-    train_true = np.array(train_y)
-
-    # Test Acc
-    if reduce:
-        print('Get features')
-        test_x_feature = pca.getFeature(test_x,k)
-    else:
-        test_x_feature = test_x
-
-    test_pre = model.predict(test_x_feature)
-    test_pre_proba = model.predict_proba(test_x_feature)
-    test_true = np.array(test_y)
-
-    test_accurate = accuracy_score(test_true, test_pre)
-    train_accurate = accuracy_score(train_true, train_pre)
-
-    print('Train Accurate:', train_accurate,'\n')
-    print('Test Accurate:', test_accurate,'\n')
-
-    if ROC == True:
-        # Evaluate
-        def get_roc(y, y_proba, class_num = 1):
-            fpr,tpr,_ = roc_curve(y, y_proba[:,class_num])
-            roc_auc = auc(fpr, tpr)
-            return fpr,tpr,roc_auc
-        fpr,tpr,roc_auc = get_roc(test_true,test_pre_proba)
-        return train_accurate, test_accurate, fpr, tpr, roc_auc
-
-    return train_accurate, test_accurate
-'''
 # Part1: get training dataset
 train_x,train_y = loadPCAData(dataset['train']['raw'])
 test_x,test_y = loadPCAData(dataset['test']['raw'])
@@ -307,7 +268,7 @@ sellect_feature_index = pca.getSample_k(7)
 mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
 roc_dict = dict()
-_,test_acc = mode.NBclassifier_raw()
+_,test_acc,_ = mode.NBclassifier_raw()
 test_acc_list.append(test_acc)
 roc_dict['original'] = mode.roc_dict
 for i in sellect_feature_index:
@@ -319,7 +280,7 @@ for i in sellect_feature_index:
     pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
-    _,test_acc = mode.NBclassifier()
+    _,test_acc,_ = mode.NBclassifier()
     test_acc_list.append(test_acc)
     roc_dict[k] = mode.roc_dict
 
@@ -345,7 +306,7 @@ pca = pca.fit(train_x)
 mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
 test_acc_list = list()
 roc_dict = dict()
-_,test_acc = mode.NBclassifier_raw()
+_,test_acc,_ = mode.NBclassifier_raw()
 test_acc_list.append(test_acc)
 roc_dict['original'] = mode.roc_dict
 for i in sellect_feature_index:
@@ -357,7 +318,7 @@ for i in sellect_feature_index:
     pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
-    _,test_acc = mode.NBclassifier()
+    _,test_acc,_ = mode.NBclassifier()
     test_acc_list.append(test_acc)
     roc_dict[k] = mode.roc_dict
 
@@ -401,8 +362,8 @@ images, labels = next(iter(loader['train']['noise']))
 imshow(torchvision.utils.make_grid(images))
 print(' '.join('%5s' % classes[labels[j]] for j in range(BATCH)))
 
-
-# PCA
+confusion_matrix_collect = list()
+#%% 4 Naive Bayes
 # Part1: get training dataset
 train_x,train_y = loadPCAData(dataset['train']['raw'])
 test_x,test_y = loadPCAData(dataset['test']['raw'])
@@ -413,10 +374,11 @@ pca = pca.fit(train_x)
 sellect_feature_index = pca.getSample_k(3)
 
 # Part3: train with classifier
-mode = Multiclassifier(train_x,train_y,test_x,test_y,print_ROC = True)
+mode = Multiclassifier(train_x,train_y,test_x,test_y)
 test_acc_list = list()
-_,test_acc = mode.LRclassifier_raw()
+_,test_acc,confusion = mode.NBclassifier_raw()
 test_acc_list.append(test_acc)
+confusion_matrix_collect.append(confusion)
 for i in sellect_feature_index:
     k = i+1
     print('K:',k)
@@ -426,10 +388,149 @@ for i in sellect_feature_index:
     pca.plot_image(train_x_recon, 32, 32, 3)
     # updata k
     mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
-    _,test_acc = mode.LRclassifier()
+    _,test_acc,confusion = mode.NBclassifier()
     test_acc_list.append(test_acc)
+    confusion_matrix_collect.append(confusion)
 
 # Part4: plot Accurate, ROC and AUC
 plt.bar(['original','k1','k2','k3'],test_acc_list)
-plt.title('Accurate')
+plt.title('4 Naive Bayes Accurate')
 plt.show()
+
+#%% 4 Logistic Regression
+# PCA
+# Part1: get training dataset
+train_x,train_y = loadPCAData(dataset['train']['raw'])
+test_x,test_y = loadPCAData(dataset['test']['raw'])
+
+# Part2: PCA fit and get a set of k
+pca = PCA(n_components = 500, svd_solver='randomized', whiten=True)
+pca = pca.fit(train_x)
+#sellect_feature_index = pca.getSample_k(3)
+
+# Part3: train with classifier
+mode = Multiclassifier(train_x,train_y,test_x,test_y)
+test_acc_list = list()
+_,test_acc,confusion = mode.LRclassifier_raw()
+test_acc_list.append(test_acc)
+confusion_matrix_collect.append(confusion)
+for i in sellect_feature_index:
+    k = i+1
+    print('K:',k)
+    # image reconstruction
+    train_x_recon = pca.getReconstruct(train_x,k)
+    pca.plot_image(train_x, 32, 32, 3)
+    pca.plot_image(train_x_recon, 32, 32, 3)
+    # updata k
+    mode.updateDataset(pca.getFeature(train_x,k),pca.getFeature(test_x,k))
+    _,test_acc,confusion = mode.LRclassifier()
+    test_acc_list.append(test_acc)
+    confusion_matrix_collect.append(confusion)
+
+# Part4: plot Accurate, ROC and AUC
+plt.bar(['original','k1','k2','k3'],test_acc_list)
+plt.title('4 Logistic Regression Accurate')
+plt.show()
+
+# %% 1 CNN
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+trainloader = loader['train']['raw']
+testloader = loader['test']['raw']
+
+net = Net()
+net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+for epoch in range(2):  # loop over the dataset multiple times
+
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        # get the inputs; data is a list of [inputs, labels]
+        inputs, labels = data[0].to(device), data[1].to(device)
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.item()
+        if i % 2000 == 1999:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+print('Finished Training')
+
+correct = 0
+total = 0
+confusion = [torch.zeros(len(testloader),BATCH) for i in range(2)]
+i = 0
+with torch.no_grad():
+    for data in testloader:
+        images, labels = data[0].to(device), data[1].to(device)
+        outputs = net(images)
+        _, predicted = torch.max(outputs.data, 1)
+        confusion[0][i,:] = predicted.view(-1)
+        confusion[1][i,:] = labels.view(-1)
+        i += 1
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+print('Accuracy of the network on the 10000 test images: %d %%' % (
+    100 * correct / total))
+confusion = [confusion[i].view(-1).numpy() for i in range(2)]
+confusion_matrix_collect.append(confusion)
+
+# %% confusion matrix
+from sklearn.metrics import confusion_matrix
+import seaborn as sns; sns.set()
+
+catagory = ['Naive Bayes','Logistic Regression']
+title = ['raw','k1','k2','k3']
+titles = [c+' '+t for c in catagory for t in title] + ['CNN']
+n_row = n_col = 3
+#plt.figure(figsize=(1.8 * n_col, 2.4 * n_row))
+plt.figure(figsize=(5 * n_col, 5 * n_row))
+plt.subplots_adjust(bottom=0, left=.01, right=.99, top=.90, hspace=.2)
+for i in range(n_row * n_col):
+    plt.subplot(n_row, n_col, i + 1)
+    mat = confusion_matrix(*confusion_matrix_collect[i])
+    sns.heatmap(mat.T, square=True, annot=True, fmt='d', cbar=False,
+                xticklabels='', yticklabels='')
+    plt.xlabel('true label')
+    plt.ylabel('predicted label')
+    plt.title(titles[i], size=24)
+    plt.xticks(())
+    plt.yticks(())
+plt.show()
+
+# %%

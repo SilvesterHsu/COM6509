@@ -674,13 +674,13 @@ trainloader_raw = loader['train']['raw']
 net = Autoencoder()
 net.to(device)
 
-def trainNet(lr = 0.001):
+def trainNet(net,trainloader_raw,trainloader_noise,lr = 0.001, max_epoch = 5):
     criterion = nn.MSELoss()
     #criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=1e-5)
     #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-    for epoch in range(2):
+    for epoch in range(max_epoch):
         running_loss = 0.0
         data_iter = iter(trainloader_raw)
         for i,data_noise in enumerate(trainloader_noise,0):
@@ -701,7 +701,7 @@ def trainNet(lr = 0.001):
                 running_loss = 0.0
     print('Finished Training')
 
-trainNet(lr = 0.001)
+trainNet(net,trainloader_raw,trainloader_noise,lr = 0.001,max_epoch = 5)
 
 testloader_noise = loader['test']['noise']
 testloader_raw = loader['test']['raw']
@@ -710,6 +710,7 @@ testloader_raw = loader['test']['raw']
 # collect loss
 loss = torch.zeros(len(testloader_noise),BATCH)
 with torch.no_grad():
+    criterion = nn.MSELoss()
     data_iter = iter(testloader_raw)
     for i,data_noise in enumerate(testloader_noise,0):
         data_raw = next(data_iter)
@@ -719,30 +720,17 @@ with torch.no_grad():
         for j in range(len(inputs)):
             loss[i,j] = criterion(inputs_noise[j],recon[j])
 
-top_list = loss.view(-1).topk(30+1)[-1]
-index_list = dict()
-for d in top_list:
-    k,v = divmod(d.item(),8)
-    index_list[k] = v
-
-# get top 30 images with highest loss
+top_list = loss.view(-1).topk(30)[-1]
 worst_data = torch.zeros(30*2,*IMAGE_SIZE)
 l = 0
-with torch.no_grad():
-    data_iter = iter(testloader_raw)
-    for i,data_noise in enumerate(testloader_noise,0):
-        data_raw = next(data_iter)
-        inputs_raw = data_raw[0].to(device)
-        inputs_noise = data_noise[0].to(device)
-        if i in index_list:
-            worst_data[l] = inputs_noise[index_list[i]]
-            worst_data[l+1] = inputs_raw[index_list[i]]
-            l += 2
-
-imshow(torchvision.utils.make_grid(worst_data,nrow=4),size = (10,30))
+for index in top_list:
+    worst_data[l] = dataset['test']['noise'].normal_images[index]
+    worst_data[l+1] = dataset['test']['raw'].normal_images[index]
+    l += 2
+imshow(torchvision.utils.make_grid(worst_data,nrow=4),title = 'Worst Data',size = (10,30))
 
 # %%
-def MSE():
+def MSE(net,testloader_raw,testloader_noise):
     loss = 0
     with torch.no_grad():
         data_iter = iter(testloader_raw)
@@ -751,7 +739,32 @@ def MSE():
             inputs_raw = data_raw[0].to(device)
             inputs_noise = data_noise[0].to(device)
             recon = net(inputs_noise)
+            criterion = nn.MSELoss()
             loss += criterion(recon, inputs_raw)
-    return loss
-MSE = MSE()
-MSE.item()
+    return loss/len(testloader_noise)
+
+def hyperparametersTest(lr,max_epoch):
+    trainloader_noise = loader['train']['noise']
+    trainloader_raw = loader['train']['raw']
+    net = Autoencoder()
+    net.to(device)
+    trainNet(net,trainloader_raw,trainloader_noise,lr = lr,max_epoch = max_epoch)
+    testloader_noise = loader['test']['noise']
+    testloader_raw = loader['test']['raw']
+    MSE_loss = MSE(net,testloader_raw,testloader_noise)
+    return MSE_loss.item()
+
+print("lr as hyperparameters")
+lr = [0.0001, 0.5, 1]
+MSE_lr = [hyperparametersTest(lr = p,max_epoch = 2) for p in lr]
+print("\n max_epoch as hyperparameters")
+max_epoch = [2,4,6]
+MSE_epoch = [hyperparametersTest(lr = 0.01,max_epoch = e) for e in max_epoch]
+
+plt.bar(lr,MSE_lr,width=0.2)
+plt.title("MSE under different learning rate")
+plt.show()
+
+plt.bar(max_epoch,MSE_epoch)
+plt.title("MSE under different epoch")
+plt.show()

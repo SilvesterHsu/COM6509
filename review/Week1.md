@@ -28,6 +28,7 @@
       - [Situation](#situation)
       - [Probability of the data set](#probability-of-the-data-set)
       - [Estimated Expectation & Convariance](#estimated-expectation--convariance)
+      - [Biased](#biased)
 
 <!-- /TOC -->
 # Introduction to Machine Learning and Probability
@@ -208,3 +209,4 @@ $$
 **Why?**
 
 The reason why it is biased is because it measured relative to the sample mean instead of the true mean.
+![](img/Jietu20200107-225112.jpg)

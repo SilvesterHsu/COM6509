@@ -1,3 +1,17 @@
+<!-- TOC -->
+
+- [Introduction to Machine Learning and Probability](#introduction-to-machine-learning-and-probability)
+  - [Course Book](#course-book)
+  - [Basic Definition](#basic-definition)
+    - [Introduction](#introduction)
+    - [Model](#model)
+  - [Probability](#probability)
+    - [Important Formula](#important-formula)
+      - [1. Basic](#1-basic)
+      - [2. Two Rules](#2-two-rules)
+    - [Bayes' Rule](#bayes-rule)
+
+<!-- /TOC -->
 # Introduction to Machine Learning and Probability
 ## Course Book
 1. Simon Rogers and Mark Girolami, **A First Course in Machine Learning**, Chapman and Hall/CRC Press, 2nd Edition, 2016
@@ -25,6 +39,7 @@ $$
 $$
 ## Probability
 ### Important Formula
+#### 1. Basic
 |       名字       |       解释        |                   公式                    |
 | :--------------: | :---------------: | :---------------------------------------: |
 |    Joint Prob    |    $X$ and $Y$    |    $P(X=x_i,Y = y_i) = \frac{n_ij}{N}$    |
@@ -33,3 +48,11 @@ $$
 
 * Marginal Probability is the calulation of Joint Probability (视作投影)
 ![Important Formula](img/Jietu20200106-172942.jpg)
+
+#### 2. Two Rules
+1. Sum Rule: $P(X) = \sum_{Y}^{}P(X,Y)$
+2. Product Rule: $P(X,Y)=P(Y|X)P(X)$
+### Bayes' Rule
+$$
+P(Y|X) = \frac{P(X|Y)P(Y)}{P(X)}
+$$

@@ -1,37 +1,47 @@
+# Introduction to Machine Learning and Probability
 <!-- TOC -->
 
-- [Introduction to Machine Learning and Probability](#introduction-to-machine-learning-and-probability)
-  - [I. Course Book](#i-course-book)
-  - [II. Basic Definition](#ii-basic-definition)
-    - [1. Introduction](#1-introduction)
-    - [2. Model](#2-model)
-  - [III. Probability](#iii-probability)
-    - [1. Important Formula](#1-important-formula)
-      - [Basic](#basic)
-      - [Two Rules](#two-rules)
-      - [Independent](#independent)
-      - [Bayes' Rule](#bayes-rule)
-    - [2. Probability Density](#2-probability-density)
-      - [Definition](#definition)
-      - [Conditions](#conditions)
-    - [3. Expectation](#3-expectation)
-    - [4. Convariance](#4-convariance)
-      - [Normal](#normal)
-      - [2 variables](#2-variables)
-      - [2 vectors](#2-vectors)
-  - [IV. Gaussian Distribution](#iv-gaussian-distribution)
-    - [1. Definition](#1-definition)
-      - [Normal](#normal-1)
-      - [D-Dimention](#d-dimention)
-    - [2. Expectation & Convariance](#2-expectation--convariance)
-    - [3. Parameter Estimation](#3-parameter-estimation)
-      - [Situation](#situation)
-      - [Probability of the data set](#probability-of-the-data-set)
-      - [Estimated Expectation & Convariance](#estimated-expectation--convariance)
-      - [Biased](#biased)
+- [I. Course Book](#i-course-book)
+- [II. Basic Definition](#ii-basic-definition)
+  - [1. Introduction](#1-introduction)
+  - [2. Model](#2-model)
+- [III. Probability](#iii-probability)
+  - [1. Important Formula](#1-important-formula)
+    - [Basic](#basic)
+    - [Two Rules](#two-rules)
+    - [Independent](#independent)
+    - [Bayes' Rule](#bayes-rule)
+  - [2. Probability Density](#2-probability-density)
+    - [Definition](#definition)
+    - [Conditions](#conditions)
+  - [3. Expectation](#3-expectation)
+  - [4. Convariance](#4-convariance)
+    - [Normal](#normal)
+    - [2 variables](#2-variables)
+    - [2 vectors](#2-vectors)
+- [IV. Gaussian Distribution](#iv-gaussian-distribution)
+  - [1. Definition](#1-definition)
+    - [Normal](#normal-1)
+    - [D-Dimention](#d-dimention)
+  - [2. Expectation & Convariance](#2-expectation--convariance)
+  - [3. Parameter Estimation](#3-parameter-estimation)
+    - [Situation](#situation)
+    - [Probability of the data set](#probability-of-the-data-set)
+    - [Estimated Expectation & Convariance](#estimated-expectation--convariance)
+    - [Biased](#biased)
+- [Lab](#lab)
+  - [Load Data](#load-data)
+  - [Sellect Data](#sellect-data)
+  - [Plot the Data](#plot-the-data)
+    - [Import packages](#import-packages)
+    - [Scatter Plot](#scatter-plot)
+    - [Histogram](#histogram)
+  - [Probability](#probability)
+    - [Marginal Probability](#marginal-probability)
+    - [Jointed Probability](#jointed-probability)
+    - [Conditional Probability](#conditional-probability)
 
 <!-- /TOC -->
-# Introduction to Machine Learning and Probability
 ## I. Course Book
 1. Simon Rogers and Mark Girolami, **A First Course in Machine Learning**, Chapman and Hall/CRC Press, 2nd Edition, 2016
 2. Christopher Bishop, **Pattern Recognition and Machine Learning**, Springer-Verlag, 2006
@@ -209,4 +219,77 @@ $$
 **Why?**
 
 The reason why it is biased is because it measured relative to the sample mean instead of the true mean.
+
 ![](img/Jietu20200107-225112.jpg)
+
+## V. Lab
+### 1. Load Data
+```python
+import pandas as pd
+film_deaths = pd.read_csv('./R-vs-Python-master/Deadliest movies scrape/code/film-death-counts-Python.csv')
+```
+### 2. Sellect Data
+```python
+film_deaths[film_deaths['Body_Count']>200]
+```
+* `film_deaths['Body_Count']>200` returns a **series** of `True` or `False`.
+> 排序
+> ```Python
+> film_deaths[film_deaths['Body_Count']>200].sort_values('Body_Count', ascending=False)
+> ```
+> `ascending=False`为降序
+
+### 3. Plot the Data
+#### Import packages
+```Python
+%matplotlib inline
+import pylab as plt
+```
+* `%matplotlib inline` ensures the plot appears in the web browser
+#### Scatter Plot
+```Python
+plt.plot(film_deaths['Year'], film_deaths['Body_Count'], 'rx')
+```
+![](img/Jietu20200108-163628.jpg)
+> Set y values to `log`
+> ```Python
+> plt.plot(film_deaths['Year'], film_deaths['Body_Count'], 'rx')
+> ax = plt.gca()
+> ax.set_yscale('log')
+> ```
+> * 使用对数能减少数据尺度上的差异
+> ![](img/Jietu20200108-164107.jpg)
+#### Histogram
+```python
+film_deaths['Body_Count'].hist(bins=20)
+plt.title('Histogram of Film Kill Count')
+```
+![](img/Jietu20200108-164214.jpg)
+### 4. Probability
+#### Marginal Probability
+Compute the approximate probability that a film from the movie body count website has over 40 deaths.
+```Python
+deaths = (film_deaths.Body_Count>40).sum()
+total_films = film_deaths.Body_Count.count()
+prob_death = float(deaths)/float(total_films)
+print("Probability of deaths being greather than 40 is:", prob_death)
+```
+* `.sum()` only takes `True` values into a count.
+* `count()` calculates all the `True` and `False` values.
+#### Jointed Probability
+The probability that the number of deaths was over 40 and the year was 2002.
+```Python
+deaths = (film_deaths.Body_Count[film_deaths.Year==2000]>40).sum()
+total_films = film_deaths.Body_Count.count() # this is total number of films
+prob_death = deaths/total_films
+print("Probability of deaths being greather than 40 and year being", year, "is:", prob_death)
+```
+下述代码作用相同：
+* `film_deaths.Body_Count[film_deaths.Year==2000]>40`
+* `film_deaths[film_deaths.Year==2000].Body_Count>40`
+
+#### Conditional Probability
+What's the probability that a film has over 40 deaths given that it was made in 2002?
+```Python
+p_y_given_t = (film_deaths.Body_Count[film_deaths.Year==2002]>40).sum()/(film_deaths.Year==2002).sum()
+```

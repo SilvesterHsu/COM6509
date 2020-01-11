@@ -83,3 +83,21 @@ $$
 $$
 \frac{\text{d}E(m,c)}{\text{d}m} = -2 \sum_{i=1}^{n}\mathbf{x}_i(y_i-m\mathbf{x}_i-c)
 $$
+### Stochastic Gradient Descent Algorithm
+#### Process
+Update the guess parameters by subtracting the gradient from the guess.
+$$
+c_{\text{new}} = c_{\text{old}} - \eta\frac{\text{d}E(m,c)}{\text{d}c}\\
+m_{\text{new}} = m_{\text{old}} - \eta\frac{\text{d}E(m,c)}{\text{d}m}\\
+$$
+Each time, only take a *small* step by using learning rate ($\eta$), otherwise we might overshoot the minimum.
+#### The Meaning of Stochastic
+We present each data point in a random order, and process one point a time.
+> 打乱数据集，然后顺序抽取。
+>
+> 但实际上应该，在SGD在每次迭代时，从整个数据集中随机选择一个数据点，这样极大的减少了计算量。
+
+Since the data is normally presented in a random order,
+$$
+m_{\text{new}} = m_{\text{old}} +2\eta[x_i(y_i-m_{\text{old}}x_i-c_{\text{old}})]
+$$

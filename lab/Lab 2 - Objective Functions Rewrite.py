@@ -59,7 +59,7 @@ def Grad(U, V, Y):
         predict = np.dot(U.loc[user], V.loc[movie])
         diff = np.squeeze(predict) - rating
         loss += diff**2
-        dU.loc[user] += 2 * diff * V.loc[movie]
+        dU.loc[user] += 2 * diff * V.loc[movie] # use +, because diff should be rating - prediction
         dV.loc[movie] += 2 * diff * U.loc[user]
     return loss, dU, dV
 # Initialize & set parameters
@@ -69,6 +69,7 @@ U = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.columns), latent_dimensi
                  index=Y_with_NaNs.columns) * 0.001  # user
 V = pd.DataFrame(np.random.normal(size=(len(Y_with_NaNs.index), latent_dimension)),
                  index=Y_with_NaNs.index) * 0.001  # movies
+
 #%% Iteration
 iterations = 10
 learn_rate = 0.01

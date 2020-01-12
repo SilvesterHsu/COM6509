@@ -1,4 +1,23 @@
 # Objective Function and Supervised Learning
+<!-- TOC -->
+- [Classification](#classification)
+  - [Premise](#premise)
+  - [Prediction Function](#prediction-function)
+  - [Decision Boundary](#decision-boundary)
+  - [Perception Algorithm](#perception-algorithm)
+    - [Process](#process)
+    - [Why it works?](#why-it-works)
+- [Regression](#regression)
+  - [Premise](#premise-1)
+  - [Steepest Descent](#steepest-descent)
+  - [Stochastic Gradient Descent Algorithm](#stochastic-gradient-descent-algorithm)
+    - [Process](#process-1)
+    - [The Meaning of Stochastic](#the-meaning-of-stochastic)
+- [Loss Function](#loss-function)
+  - [Definition](#definition)
+  - [Aim](#aim)
+  - [Turning Points](#turning-points)
+<!-- /TOC -->
 ## Classification
 ### Premise
 * Features: $\mathbf{x}_i$ for the $i$th data point
@@ -100,4 +119,36 @@ We present each data point in a random order, and process one point a time.
 Since the data is normally presented in a random order,
 $$
 m_{\text{new}} = m_{\text{old}} +2\eta[x_i(y_i-m_{\text{old}}x_i-c_{\text{old}})]
+$$
+## Loss Function
+### Definition
+Loss function measures how the gap between the model and the real true.
+
+|         名字          |                          公式                          |
+| :-------------------: | :----------------------------------------------------: |
+| Squared loss function |  $L_n(t_n,f(x_n;w_o,w_1)) = (t_n - f(x_n;w_o,w_1))^2$  |
+| Average loss function | $L = \frac{1}{N}\sum_{n=1}^{N}L_n(t_n,f(x_n;w_o,w_1))$ |
+
+More generally,
+$$
+L = \frac{1}{N}\sum_{n=1}^{N}(t_n - \mathbf{w}^T\mathbf{x}_n)^2
+$$
+### Aim
+$$
+\underset{w_0,w_1} {\text{argmin}}\frac{1}{N}\sum_{n=1}^{N}L_n(t_n,f(x_n;w_o,w_1))
+$$
+or
+$$
+\underset{w_0,w_1} {\text{argmin}}\frac{1}{N}\sum_{n=1}^{N}(t_n - \mathbf{w}^T\mathbf{x}_n)^2
+$$
+### Turning Points
+The point touch the minima.
+* Set the gradient of the loss function to 0.
+$$
+\frac{\delta f(w)}{\delta w} = 0
+$$
+For example,
+$$
+\frac{\partial L}{\partial \mathbf{w}} = \frac{2}{N}\mathbf{x}^T\mathbf{x}\mathbf{w} - \frac{2}{N}\mathbf{x}^T\mathbf{t} = 0 \\
+\widehat{\mathbf{w}} = (\mathbf{x}^T\mathbf{x})^{-1}\mathbf{x}^T\mathbf{t}
 $$

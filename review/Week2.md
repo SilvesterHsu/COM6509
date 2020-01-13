@@ -1,40 +1,5 @@
+[[toc]]
 # Objective Function and Supervised Learning
-<!-- TOC -->
-- [I. Classification](#i-classification)
-  - [1. Premise](#1-premise)
-  - [2.Prediction Function](#2prediction-function)
-  - [3. Decision Boundary](#3-decision-boundary)
-  - [4. Perception Algorithm](#4-perception-algorithm)
-    - [Process](#process)
-    - [Why it works?](#why-it-works)
-- [II. Regression](#ii-regression)
-  - [1. Premise](#1-premise-1)
-  - [2. Steepest Descent](#2-steepest-descent)
-  - [3. Stochastic Gradient Descent Algorithm](#3-stochastic-gradient-descent-algorithm)
-    - [Process](#process-1)
-    - [The Meaning of Stochastic](#the-meaning-of-stochastic)
-- [III. Loss Function](#iii-loss-function)
-  - [1. Definition](#1-definition)
-  - [2. Aim](#2-aim)
-  - [3. Turning Points](#3-turning-points)
-- [IV. Lab](#iv-lab)
-  - [1. Datasets](#1-datasets)
-    - [`Y_with_NaNs`](#y_with_nans)
-    - [`Y`](#y)
-    - [`U`](#u)
-    - [`V`](#v)
-  - [2. Steepest Descent Algorithm](#2-steepest-descent-algorithm)
-    - [Objective Function](#objective-function)
-    - [Objective Optimization](#objective-optimization)
-    - [Gradient](#gradient)
-    - [Iteration Process](#iteration-process)
-  - [3. Stochastic Gradient Descent](#3-stochastic-gradient-descent)
-    - [Objective Function](#objective-function-1)
-    - [Objective Optimization](#objective-optimization-1)
-    - [Gradient](#gradient-1)
-    - [Iteration Process](#iteration-process-1)
-  - [4. Prediction](#4-prediction)
-<!-- /TOC -->
 ## I. Classification
 ### 1. Premise
 * Features: $\mathbf{x}_i$ for the $i$th data point

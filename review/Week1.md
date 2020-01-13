@@ -1,47 +1,5 @@
+[[toc]]
 # Introduction to Machine Learning and Probability
-<!-- TOC -->
-
-- [I. Course Book](#i-course-book)
-- [II. Basic Definition](#ii-basic-definition)
-  - [1. Introduction](#1-introduction)
-  - [2. Model](#2-model)
-- [III. Probability](#iii-probability)
-  - [1. Important Formula](#1-important-formula)
-    - [Basic](#basic)
-    - [Two Rules](#two-rules)
-    - [Independent](#independent)
-    - [Bayes' Rule](#bayes-rule)
-  - [2. Probability Density](#2-probability-density)
-    - [Definition](#definition)
-    - [Conditions](#conditions)
-  - [3. Expectation](#3-expectation)
-  - [4. Convariance](#4-convariance)
-    - [Normal](#normal)
-    - [2 variables](#2-variables)
-    - [2 vectors](#2-vectors)
-- [IV. Gaussian Distribution](#iv-gaussian-distribution)
-  - [1. Definition](#1-definition)
-    - [Normal](#normal-1)
-    - [D-Dimention](#d-dimention)
-  - [2. Expectation & Convariance](#2-expectation--convariance)
-  - [3. Parameter Estimation](#3-parameter-estimation)
-    - [Situation](#situation)
-    - [Probability of the data set](#probability-of-the-data-set)
-    - [Estimated Expectation & Convariance](#estimated-expectation--convariance)
-    - [Biased](#biased)
-- [V. Lab](#v-lab)
-  - [1. Load Data](#1-load-data)
-  - [2. Sellect Data](#2-sellect-data)
-  - [3. Plot the Data](#3-plot-the-data)
-    - [Import packages](#import-packages)
-    - [Scatter Plot](#scatter-plot)
-    - [Histogram](#histogram)
-  - [4. Probability](#4-probability)
-    - [Marginal Probability](#marginal-probability)
-    - [Jointed Probability](#jointed-probability)
-    - [Conditional Probability](#conditional-probability)
-
-<!-- /TOC -->
 ## I. Course Book
 1. Simon Rogers and Mark Girolami, **A First Course in Machine Learning**, Chapman and Hall/CRC Press, 2nd Edition, 2016
 2. Christopher Bishop, **Pattern Recognition and Machine Learning**, Springer-Verlag, 2006

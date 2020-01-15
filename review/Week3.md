@@ -10,6 +10,11 @@ $$y_i = m x_i + c + \epsilon_i$$
 * $\epsilon_i$ : random quantity. It's a Gaussian distribution.
 
   $\epsilon_i \sim  \mathcal{N}(0, \sigma^2)$
+
+**The benefits of explicitly modelling the noise:**
+* The ability to quantify the uncertainty in our parameters
+* The ability to express uncertainties in our prediction
+
 ### 2. iid Assumption
   * IID代表独立且完全分布式
   * 我们说一组随机变量是IID，如果它们在统计上是独立的，并且每个变量都遵循相同的分布。
@@ -111,3 +116,15 @@ And can be further simplified by substituting $\widehat{\mathbf{w}} = (\mathbf{X
 $$
 \widehat{\sigma^2} = \frac{1}{N}(y^Ty-y^T\mathbf{X}\widehat{\mathbf{w}})
 $$
+## VI. Lab
+### Coordinate Descent
+在坐标下降中，我们选择一次移动一个参数。
+1. $c^* = \frac{\sum_{i=1}^n(y_i-m^*x_i)}{n}$
+2. $m^* = \frac{\sum_{i=1}^n (y_i - c)x_i}{\sum_{i=1}^n x_i^2}$
+```python
+for i in np.arange(10):
+    m = ((y - c)*x).sum()/(x*x).sum()
+    c = (y-m*x).sum()/y.shape[0]
+print(m)
+print(c)
+```

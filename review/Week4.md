@@ -31,6 +31,52 @@ And the result could be,
 
 ![](img/Jietu20200117-021524.jpg)
 
+### 3. Polynomial Discussion
+Increase the **Polynomial Order** will result in a model closer to the **training data**.
+* The training loss decreases as the polynomial order increase.
+* The validation loss increase as the polynomial order increase.
+
+Hence, this leads to the hyper parameters optimization problem. It can be solve by **cross-validation**.
+
+Specially, we discuss the **$K$-fold cross-validation**.
+1. Seplit the data into $K$ equally
+2. Each block as a validation set test the model which is trained with the other $K-1$ blocks.
+3. Average over the resulting $K$ loss.
+
+![](img/Jietu20200118-194929.jpg)
+
+and the average loss for LOOCV is:
+$$
+\mathfrak{L}^{CV} = \frac{1}{N}\sum_{n=1}^N(y_n - \widehat{w}_{-n}^Tx_n)^2
+$$
+where $\widehat{w}_{-n}$ is the parameters without $n$th training.
+> Tips:
+>
+> The data can be seplit into folds in different ways.
+
+![](img/Jietu20200118-215215.jpg)
+![](img/Jietu20200118-222405.jpg)
+Another way is known as **regularisation**.
+
+In general, the higher the sum of the absolute values in $\mathbf{w}$, the more complex the model
+$$
+\sum_iw_i^2
+$$
+or after vectorizing,
+$$
+\mathbf{w}^T\mathbf{w}
+$$
+
+In order to keep it low, we add it into the average squared loss $\mathfrak{L}$:
+$$
+\mathfrak{L}' = \mathfrak{L}+\lambda\mathbf{w}^T\mathbf{w}
+$$
+
+![](img/Jietu20200118-222451.jpg)
+Then the solution is given by:
+$$
+\widehat{\mathbf{w}} = (\mathbf{X}^T\mathbf{X}+N\lambda\mathbf{I})^{-1}\mathbf{X}^T\mathbf{y}
+$$
 ## II. Vectorize Nonlinear Regression
 The basic definition of functions are
 

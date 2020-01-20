@@ -6,9 +6,33 @@ Introduce **basis functions** for non-linear regression models.
 
 * Solution: create a feature space: define $\phi(\mathbf{x})$ where $\phi(\cdot)$ is a nonlinear function of $\mathbf{x}$.
 
-* Model for target is a linear combination of these nonlinear functions
-    $$f(\mathbf{x}) = \sum_{j=0}^m w_j \phi_j(\mathbf{x})$$
-### 1. Quadratic Basis
+* Model for target is a linear combination of these nonlinear functions (polynomial basis, RBF basis,  Fourier basis and Relu basis).
+
+For example,
+$$f(\mathbf{x}) = \sum_{j=0}^m w_j \phi_j(\mathbf{x})$$
+### 0. Defermine Linear Functions (input & parameters)
+(a) $f(x) = w_1x_1 + w_2$
+
+(b) $f(x) = w_1\exp(x_1) + w_2x_2 + w_3$
+
+(c\) $f(x) = \log(x_1^{w_1}) + w_2x_2^2 + w_3$
+
+(d) $f(x) = \exp(-\sum_i(x_i - w_i)^2)$
+
+(e) $f(x) = \exp(-\mathbf{w}^\top \mathbf{x})$
+
+>
+>(a) The model is linear in both the inputs and the parameters.
+>
+>(b) The model is non-linear in the inputs, but linear in the parameters.
+>
+>(c\) The model is non-linear in the inputs, but linear in the parameters.
+>
+>(d) The model is non-linear in both the inputs and the parameters.
+>
+>(e) The model is non-linear in both the inputs and the parameters.
+
+### 1. Polynomial Basis
 Here, the feature space is
 $$\boldsymbol{\phi} = [1, x, x^2]$$
 Thus, the model becomes,
@@ -124,4 +148,3 @@ We calculate the differentiating, and it leads to
 $$\mathbf{w}^{*}=\left[\sum _{i=1}^{n}\boldsymbol{\phi}_i\boldsymbol{\phi}_i^{\top}\right]^{-1}\sum _{i=1}^{n}\boldsymbol{\phi}_iy_i = \left(\boldsymbol{\Phi}^\top \boldsymbol{\Phi}\right)^{-1} \boldsymbol{\Phi}^\top \mathbf{y}\\
 \left.\sigma^2\right.^{{*}}=\frac{\sum _{i=1}^{n}\left(y_i-\left.\mathbf{w}^{*}\right.^{\top}\boldsymbol{\phi}_i\right)^{2}}{n}
 $$
-## III. 𝐐𝐑 Decomposition
